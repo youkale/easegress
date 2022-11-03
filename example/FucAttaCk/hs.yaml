@@ -1,0 +1,8 @@
+name: httpserver-api
+kind: HTTPServer
+port: 10080
+https: false
+rules:
+  - paths:
+      - pathPrefix: /apis
+        backend: pipeline-api
