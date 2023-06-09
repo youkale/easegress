@@ -4,63 +4,75 @@
   - [Proxy](#proxy)
     - [Configuration](#configuration)
     - [Results](#results)
-  - [WebSocketProxy](#websocketproxy)
+  - [SimpleHTTPProxy](#simplehttpproxy)
     - [Configuration](#configuration-1)
     - [Results](#results-1)
-  - [CORSAdaptor](#corsadaptor)
+  - [WebSocketProxy](#websocketproxy)
     - [Configuration](#configuration-2)
     - [Results](#results-2)
-  - [Fallback](#fallback)
+  - [CORSAdaptor](#corsadaptor)
     - [Configuration](#configuration-3)
     - [Results](#results-3)
-  - [Mock](#mock)
+  - [Fallback](#fallback)
     - [Configuration](#configuration-4)
     - [Results](#results-4)
-  - [RemoteFilter](#remotefilter)
+  - [Mock](#mock)
     - [Configuration](#configuration-5)
     - [Results](#results-5)
-  - [RequestAdaptor](#requestadaptor)
+  - [RemoteFilter](#remotefilter)
     - [Configuration](#configuration-6)
     - [Results](#results-6)
-  - [RequestBuilder](#requestbuilder)
+  - [RequestAdaptor](#requestadaptor)
     - [Configuration](#configuration-7)
     - [Results](#results-7)
-  - [RateLimiter](#ratelimiter)
+  - [RequestBuilder](#requestbuilder)
     - [Configuration](#configuration-8)
     - [Results](#results-8)
-  - [ResponseAdaptor](#responseadaptor)
+  - [RateLimiter](#ratelimiter)
     - [Configuration](#configuration-9)
     - [Results](#results-9)
-  - [ResponseBuilder](#responsebuilder)
+  - [ResponseAdaptor](#responseadaptor)
     - [Configuration](#configuration-10)
     - [Results](#results-10)
-  - [Validator](#validator)
+  - [ResponseBuilder](#responsebuilder)
     - [Configuration](#configuration-11)
     - [Results](#results-11)
-  - [WasmHost](#wasmhost)
+  - [Validator](#validator)
     - [Configuration](#configuration-12)
     - [Results](#results-12)
-  - [Kafka](#kafka)
+  - [WasmHost](#wasmhost)
     - [Configuration](#configuration-13)
     - [Results](#results-13)
-  - [HeaderToJSON](#headertojson)
+  - [Kafka](#kafka)
     - [Configuration](#configuration-14)
     - [Results](#results-14)
-  - [CertExtractor](#certextractor)
+  - [HeaderToJSON](#headertojson)
     - [Configuration](#configuration-15)
     - [Results](#results-15)
-  - [HeaderLookup](#headerlookup)
+  - [CertExtractor](#certextractor)
     - [Configuration](#configuration-16)
     - [Results](#results-16)
-  - [ResultBuilder](#resultbuilder)
+  - [HeaderLookup](#headerlookup)
     - [Configuration](#configuration-17)
     - [Results](#results-17)
-  - [DataBuilder](#databuilder)
+  - [ResultBuilder](#resultbuilder)
     - [Configuration](#configuration-18)
     - [Results](#results-18)
-  - [OIDCAdaptor](#OIDCAdaptor)
+  - [DataBuilder](#databuilder)
     - [Configuration](#configuration-19)
     - [Results](#results-19)
+  - [OIDCAdaptor](#oidcadaptor)
+    - [Configuration](#configuration-20)
+    - [Results](#results-20)
+  - [OPAFilter](#opafilter)
+    - [Configuration](#configuration-21)
+    - [Results](#results-21)
+  - [Redirector](#redirector)
+    - [Configuration](#configuration-22)
+    - [Results](#results-22)
+  - [GRPCProxy](#grpcproxy)
+    - [Configuration](#configuration-23)
+    - [Results](#results-23)
   - [Common Types](#common-types)
     - [pathadaptor.Spec](#pathadaptorspec)
     - [pathadaptor.RegexpReplace](#pathadaptorregexpreplace)
@@ -69,9 +81,12 @@
     - [proxy.Server](#proxyserver)
     - [proxy.LoadBalanceSpec](#proxyloadbalancespec)
     - [proxy.StickySessionSpec](#proxystickysessionspec)
+    - [proxy.HealthCheckSpec](#proxyhealthcheckspec)
     - [proxy.MemoryCacheSpec](#proxymemorycachespec)
     - [proxy.RequestMatcherSpec](#proxyrequestmatcherspec)
-    - [proxy.StringMatcher](#proxystringmatcher)
+    - [grpcproxy.ServerPoolSpec](#grpcproxyserverpoolspec)
+    - [grpcproxy.RequestMatcherSpec](#grpcproxyrequestmatcherspec)
+    - [StringMatcher](#stringmatcher)
     - [proxy.MethodAndURLMatcher](#proxymethodandurlmatcher)
     - [urlrule.URLRule](#urlruleurlrule)
     - [proxy.Compression](#proxycompression)
@@ -82,6 +97,8 @@
     - [ratelimiter.Policy](#ratelimiterpolicy)
     - [httpheader.ValueValidator](#httpheadervaluevalidator)
     - [validator.JWTValidatorSpec](#validatorjwtvalidatorspec)
+    - [validator.BasicAuthValidatorSpec](#validatorbasicauthvalidatorspec)
+    - [basicAuth.LDAPSpec](#basicauthldapspec)
     - [signer.Spec](#signerspec)
     - [signer.HeaderHoisting](#signerheaderhoisting)
     - [signer.Literal](#signerliteral)
@@ -131,16 +148,16 @@ name: proxy-example-2
 pools:
 - servers:
   - url: http://127.0.0.1:9095
-- filter:
+  filter:
     headers:
       X-Candidate:
         exact: candidate
-  servers:
+- servers:
   - url: http://127.0.0.1:9096
-- filter:
+  filter:
     permil: 400 # between 0 and 1000
     policy: random
-  servers:
+- servers:
   - url: http://127.0.0.1:9097
 ```
 
@@ -176,7 +193,7 @@ pools:
 | ---- | ---- | ----------- | -------- |
 | pools | [proxy.ServerPoolSpec](#proxyserverpoolspec) | The pool without `filter` is considered the main pool, other pools with `filter` are considered candidate pools, and a `Proxy` must contain exactly one main pool. When `Proxy` gets a request, it first goes through the candidate pools, and if one of the pool's filter matches the request, servers of this pool handle the request, otherwise, the request is passed to the main pool. | Yes |
 | mirrorPool | [proxy.ServerPoolSpec](#proxyserverpoolspec) | Define a mirror pool, requests are sent to this pool simultaneously when they are sent to candidate pools or main pool | No |
-| compression | [proxy.CompressionSpec](#proxyCompressionSpec) | Response compression options | No |
+| compression | [proxy.Compression](#proxyCompression) | Response compression options | No |
 | mtls | [proxy.MTLS](#proxymtls) | mTLS configuration | No |
 | maxIdleConns | int | Controls the maximum number of idle (keep-alive) connections across all hosts. Default is 10240 | No |
 | maxIdleConnsPerHost | int | Controls the maximum idle (keep-alive) connections to keep per-host. Default is 1024 | No |
@@ -190,6 +207,54 @@ pools:
 | clientError   | Client-side (Easegress) network error                  |
 | serverError   | Server-side network error                              |
 | failureCode   | Resp failure code matches failureCodes set in poolSpec |
+
+## SimpleHTTPProxy
+
+The `SimpleHTTPProxy` filter is a simplified version of the Proxy filter, unlike
+`Proxy`, which are mainly used as reverse proxy, this filter is mainly for
+forward proxies.
+
+The following example demonstrates a basic configuration for `SimpleHTTPProxy`.
+Unlike the `Proxy` filter, the backend service's address is not specified in
+the `SimpleHTTPProxy` configuration. Instead, the request URL is used directly,
+allowing for the use of a single `SimpleHTTPProxy` instance for any backend
+services.
+
+```yaml
+name: simple-http-proxy
+kind: Pipeline
+flow:
+  - filter: requestBuilder
+  - filter: proxy
+
+filters:
+  - kind: RequestBuilder
+    name: requestBuilder
+    template: |
+      url: http://127.0.0.1:9095
+      method: GET
+
+  - kind: SimpleHTTPProxy
+    name: proxy
+```
+
+### Configuration
+| Name | Type | Description | Required |
+| ---- | ---- | ----------- | -------- |
+| retryPolicy | string | Retry policy name | No |
+| timeout | string | Request calceled when timeout | No |
+| compression | [proxy.Compression](#proxyCompression) | Response compression options | No |
+| maxIdleConns | int | Controls the maximum number of idle (keep-alive) connections across all hosts. Default is 10240 | No |
+| maxIdleConnsPerHost | int | Controls the maximum idle (keep-alive) connections to keep per-host. Default is 1024 | No |
+| serverMaxBodySize | int64 | Max size of response body. the default value is 4MB. Responses with a body larger than this option are discarded.  When this option is set to `-1`, Easegress takes the response body as a stream and the body can be any size, but some features are not possible in this case, please refer [Stream](./stream.md) for more information. | No |
+
+### Results
+
+| Value         | Description                                            |
+| ------------- | -------------------------------------------------------|
+| internalError | Encounters an internal error                           |
+| clientError   | Client-side (Easegress) network error                  |
+| serverError   | Server-side network error                              |
 
 ## WebSocketProxy
 
@@ -231,7 +296,6 @@ rules:
 | Name | Type | Description | Required |
 | ---- | ---- | ----------- | -------- |
 | pools | [websocketproxy.WebSocketServerPoolSpec](#websocketproxywebsocketserverpoolspec) | The pool without `filter` is considered the main pool, other pools with `filter` are considered candidate pools, and a `Proxy` must contain exactly one main pool. When `WebSocketProxy` gets a request, it first goes through the candidate pools, and if it matches one of the pool's filter, servers of this pool handle the connection, otherwise, it is passed to the main pool. | Yes |
-| defaultOrigin | string | Easegress need to set the `Origin` header when connecting to the backend service, if the client request does not have this header, this value is used.  | No |
 
 ### Results
 
@@ -412,16 +476,21 @@ path:
 
 ### Configuration
 
-| Name       | Type                                         | Description                                                                                                                                                                                                         | Required |
-| -----------| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| method     | string                                       | If provided, the method of the original request is replaced by the value of this option                                                                                                                             | No       |
-| path       | [pathadaptor.Spec](#pathadaptorSpec)         | Rules to revise request path                                                                                                                                                                                        | No       |
-| header     | [httpheader.AdaptSpec](#httpheaderAdaptSpec) | Rules to revise request header                                                                                                                                                                                      | No       |
-| body       | string                                       | If provided the body of the original request is replaced by the value of this option. | No       |
-| host       | string                                       | If provided the host of the original request is replaced by the value of this option. | No       |
-| decompress | string                                       | If provided, the request body is replaced by the value of decompressed body. Now support "gzip" decompress                                                                                                          | No       |
-| compress   | string                                       | If provided, the request body is replaced by the value of compressed body. Now support "gzip" compress                                                                                                              | No       |
+| Name       | Type                                         | Description                                                                                                                                                            | Required |
+| -----------| -------------------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
+| method     | string                                       | If provided, the method of the original request is replaced by the value of this option                                                                                | No       |
+| path       | [pathadaptor.Spec](#pathadaptorSpec)         | Rules to revise request path                                                                                                                                           | No       |
+| header     | [httpheader.AdaptSpec](#httpheaderAdaptSpec) | Rules to revise request header                                                                                                                                         | No       |
+| body       | string                                       | If provided the body of the original request is replaced by the value of this option.                                                                                  | No       |
+| host       | string                                       | If provided the host of the original request is replaced by the value of this option.                                                                                  | No       |
+| decompress | string                                       | If provided, the request body is replaced by the value of decompressed body. Now support "gzip" decompress                                                             | No       |
+| compress   | string                                       | If provided, the request body is replaced by the value of compressed body. Now support "gzip" compress                                                                 | No       |
 | sign   | [requestadaptor.SignerSpec](#requestadaptorsignerspec) | If provided, sign the request using the [Amazon Signature V4](https://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) signing process with the configuration | No       |
+| template        | string | template to create request adaptor, please refer the [template](#template-of-builder-filters) for more information                                                       | No       |
+| leftDelim       | string | left action delimiter of the template, default is `{{`                                                                                                                 | No       |
+| rightDelim      | string | right action delimiter of the template, default is `}}`                                                                                                                | No       |
+
+**NOTE**: template field takes higher priority than the static field with the same name.
 
 ### Results
 
@@ -541,12 +610,17 @@ header:
 
 ### Configuration
 
-| Name   | Type     | Description   | Required |
-| ------ | -------- |-------------- | -------- |
-| header | [httpheader.AdaptSpec](#httpheaderAdaptSpec) | Rules to revise request header    | No       |
-| body   | string   | If provided the body of the original request is replaced by the value of this option. | No       |
-| compress | string | compress body, currently only support gzip | No |
-| decompress | string | decompress body, currently only support gzip | No |
+| Name   | Type     | Description                                                                                                         | Required |
+| ------ | -------- |---------------------------------------------------------------------------------------------------------------------| -------- |
+| header | [httpheader.AdaptSpec](#httpheaderAdaptSpec) | Rules to revise request header                                                                                      | No       |
+| body   | string   | If provided the body of the original request is replaced by the value of this option.                               | No       |
+| compress | string | compress body, currently only support gzip                                                                          | No |
+| decompress | string | decompress body, currently only support gzip                                                                        | No |
+| template        | string | template to create response adaptor, please refer the [template](#template-of-builder-filters) for more information | No       |
+| leftDelim       | string | left action delimiter of the template, default is `{{`                                                              | No       |
+| rightDelim      | string | right action delimiter of the template, default is `}}`                                                             | No       |
+
+**NOTE**: template field takes higher priority than the static field with the same name.
 
 ### Results
 
@@ -683,7 +757,7 @@ basicAuth:
 | jwt       | [validator.JWTValidatorSpec](#validatorJWTValidatorSpec)          | JWT validation rule, validates JWT token string from the `Authorization` header or cookies                                                                                                                    | No       |
 | signature | [signer.Spec](#signerSpec)                                        | Signature validation rule, implements an [Amazon Signature V4](https://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) compatible signature validation validator, with customizable literal strings | No       |
 | oauth2    | [validator.OAuth2ValidatorSpec](#validatorOAuth2ValidatorSpec)    | The `OAuth/2` method support `Token Introspection` mode and `Self-Encoded Access Tokens` mode, only one mode can be configured at a time                                                                      | No       |
-| basicAuth    | [basicauth.BasicAuthValidatorSpec](#basicauthBasicAuthValidatorSpec)    | The `BasicAuth` method support `FILE` mode and `ETCD` mode, only one mode can be configured at a time.                                                                  | No       |
+| basicAuth    | [validator.BasicAuthValidatorSpec](#validatorBasicAuthValidatorSpec)    | The `BasicAuth` method support `FILE`, `ETCD` and `LDAP` mode, only one mode can be configured at a time.                                                                  | No       |
 
 ### Results
 
@@ -1059,6 +1133,279 @@ After OIDCAdaptor handled, following OIDC related information can be obtained fr
 * **X-Access-Token**: The AccessToken returned by OpenId Connect or OAuth2.0 flow.
 
 
+
+## OPAFilter
+The [Open Policy Agent (OPA)](https://www.openpolicyagent.org/docs/latest/) is an open source, 
+general-purpose policy engine that unifies policy enforcement across the stack. It provides a 
+high-level declarative language, which can be used to define and enforce policies in 
+Easegress API Gateway. Currently, there are 160+ built-in operators and functions we can use, 
+for examples `net.cidr_contains` and `contains`.
+
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+  - filter: opa-filter
+    jumpIf: { opaDenied: END }
+filters:
+  - name: opa-filter
+    kind: OPAFilter
+    defaultStatus: 403
+    readBody: true
+    includedHeaders: a,b,c
+    policy: |
+      package http
+      default allow = false
+      allow {
+         input.request.method == "POST"
+         input.request.scheme == "https"
+         contains(input.request.path, "/")               
+         net.cidr_contains("127.0.0.0/24",input.request.realIP)          
+      }
+```
+
+The following table lists input request fields that can be used in an OPA policy to help enforce it.
+
+| Name                     | Type   | Description                                                           | Example                              |
+|--------------------------|--------|-----------------------------------------------------------------------|--------------------------------------|
+| input.request.method     | string | The current http request method                                       | "POST"                               |
+| input.request.path       | string | The current http request URL path                                     | "/a/b/c"                             |
+| input.request.path_parts | array  | The current http request URL path parts                               | ["a","b","c"]                        |
+| input.request.raw_query  | string | The current http request raw query                                    | "a=1&b=2&c=3"                        |
+| input.request.query      | map    | The current http request query map                                    | {"a":1,"b":2,"c":3}                  |
+| input.request.headers    | map    | The current http request header map targeted by<br/> includedHeaders  | {"Content-Type":"application/json"}  |
+| input.request.scheme     | string | The current http request scheme                                       | "https"                              | 
+| input.request.realIP     | string | The current http request client real IP                               | "127.0.0.1"                          |
+| input.request.body       | string | The current http request body string data                             | {"data":"xxx"}                       |
+
+
+### Configuration
+
+| Name             | Type   | Description                                                                          | Required |
+|------------------|--------|--------------------------------------------------------------------------------------|----------|
+| defaultStatus    | int    | The default HTTP status code when request is denied by the OPA policy decision       | No       |
+| readBody         | bool   | Whether to read request body as OPA policy data on condition                         | No       |
+| includedHeaders  | string | Names of the HTTP headers to be included in `input.request.headers`, comma-separated | No       |
+| policy           | string | The OPA policy written in the Rego declarative language                              | Yes      |
+
+### Results
+| Value     | Description                                   |
+|-----------|-----------------------------------------------|
+| opaDenied | The request is denied by OPA policy decision. |
+
+
+## Redirector
+
+The `Redirector` filter is used to do HTTP redirect. `Redirector` matches request url, do replacement, and return response with status code of `3xx` and put new path in response header with key of `Location`.
+
+Here a simple example: 
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "^/users/([0-9]+)"
+  replacement: "http://example.com/display?user=$1"
+```
+In this example, request with path `/users/123` will redirect to `http://example.com/display?user=123`.
+```
+HTTP/1.1 301 Moved Permanently
+Location: http://example.com/display?user=123
+```
+
+More details about spec:
+
+We use [ReplaceAllString](https://pkg.go.dev/regexp#Regexp.ReplaceAllString) to do match and replace and put output into response header with key `Location`. By default, we use `URI` as input, but you can change input by control parameter of `matchPart`.
+
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "^/users/([0-9]+)"
+  # by default, value of matchPart is uri, supported values: uri, path, full.
+  matchPart: "full" 
+  replacement: "http://example.com/display?user=$1"
+```
+
+For request with URL of `https://example.com:8080/apis/v1/user?id=1`, URI part is `/apis/v1/user?id=1`, path part is `/apis/v1/user` and full part is `https://example.com:8080/apis/v1/user?id=1`.
+
+By default, we return status code of `301` "Moved Permanently". To return status code of `302` "Found" or other `3xx`, change `statusCode` in yaml. 
+
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "^/users/([0-9]+)"
+  # default value of 301, supported values: 301, 302, 303, 304, 307, 308.
+  statusCode: 302
+  replacement: "http://example.com/display?user=$1"
+```
+
+Following are some common used examples: 
+1. URI prefix redirect
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "^(.*)$"
+  matchPart: "uri"
+  replacement: "/prefix$1"
+```
+
+```
+input: https://example.com/path/to/api/?key1=123&key2=456
+output: /prefix/path/to/api/?key1=123&key2=456
+```
+
+URI prefix redirect with schema and host:
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "(^.*\/\/)([^\/]*)(.*)$"
+  matchPart: "full"
+  replacement: "${1}${2}/prefix$3"
+```
+```
+input: https://example.com/path/to/api/?key1=123&key2=456
+output: https://example.com/prefix/path/to/api/?key1=123&key2=456
+```
+
+2. Domain Redirect
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "(^.*\/\/)([^\/]*)(.*$)"
+  matchPart: "full"
+  # use ${1} instead of $1 here.
+  replacement: "${1}my.com${3}"
+```
+```
+input: https://example.com/path/to/api/?key1=123&key2=456
+output: https://my.com/path/to/api/?key1=123&key2=456
+```
+
+3. Path Redirect
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "/path/to/(user)\.php\?id=(\d*)"
+  matchPart: "uri"
+  replacement: "/api/$1/$2"
+```
+```
+input: https://example.com/path/to/user.php?id=123
+output: /api/user/123
+```
+
+Path redirect with schema and host:
+```yaml
+name: demo-pipeline
+kind: Pipeline
+flow:
+- filter: redirector
+filters:
+- name: redirector
+  kind: Redirector
+  match: "(^.*\/\/)([^\/]*)/path/to/(user)\.php\?id=(\d*)"
+  matchPart: "full"
+  replacement: "${1}${2}/api/$3/$4"
+```
+```
+input: https://example.com/path/to/user.php?id=123
+output: https://example.com/api/user/123
+```
+
+
+### Configuration
+| Name | Type | Description | Required |
+| ---- | ---- | ----------- | -------- |
+| match | string | Regular expression to match request path. The syntax of the regular expression is [RE2](https://golang.org/s/re2syntax) | Yes |
+| matchPart | string | Parameter to decide which part of url used to do match, supported values: uri, full, path. Default value is uri. | No |
+| replacement | string | Replacement when the match succeeds. Placeholders like `$1`, `$2` can be used to represent the sub-matches in `regexp` | Yes | 
+| statusCode | int | Status code of response. Supported values: 301, 302, 303, 304, 307, 308. Default: 301. | No | 
+### Results
+| Value | Description |
+| ----- | ----------- |
+| redirected | The request has been redirected |
+
+## GRPCProxy
+
+The `GRPCProxy` filter is a proxy for gRPC backend service. It supports both unary RPCs and streaming RPCs.
+
+Below is one of the simplest `GRPCProxy` configurations, it forwards incoming gRPC connections to `127.0.0.1:9095`.
+
+```yaml
+kind: GRPCProxy
+name: grpc-proxy-example-1
+pools:
+- servers:
+  - url: http://127.0.0.1:9095
+```
+
+Same as the `Proxy` filter:
+
+* a `filter` can be configured on a pool.
+* the servers of a pool can be configured dynamically via service discovery.
+* when there are multiple servers in a pool, the pool can do a load balance between them.
+
+Note that each gRPC client establishes a connection with Easegress. However,
+Easegress may utilize a single connection when forwarding requests from various
+clients to a gRPC server, due to its use of HTTP2. This action could potentially
+disrupt some client or server applications. For instance, if the client
+applications are structured to directly connect to the server, and both the
+client and server have the ability to request a connection closure, then
+problems may arise once Easegress is installed between them. If the server
+wants to close the connection of one client, it closes the shared connection
+with Easegress, thus affecting other clients.
+
+### Configuration
+
+| Name         | Type                                                   | Description                                                                 | Required |
+| ------------ | ------------------------------------------------------ | --------------------------------------------------------------------------- | -------- |
+| pools               | [grpcproxy.ServerPoolSpec](#grpcproxyserverpoolspec) | The pool without `filter` is considered the main pool, other pools with `filter` are considered candidate pools, and a `GRPCProxy` must contain exactly one main pool. When a `GRPCProxy` gets a request, it first goes through the candidate pools, and if one of the pool's filter matches the request, servers of this pool handle the request, otherwise, the request is passed to the main pool. | Yes      |
+| timeout             | string                                       | The total time from easegress receive request to receive response, default is never timeout, only apply to unary calls.                                                                                                                                              | No       |
+| borrowTimeout       | string                                       | Timeout of borrow a connection from pool. Default is never timeout.                   | No       |
+| connectTimeout      | string                                       | Timeout until a new connection is fully established.  Default is never timeout.       | No       |
+| maxIdleConnsPerHost | int                                          | For a address, the maximum of connections allowed to create. Default value is 1024 | No       |
+
+### Results
+
+| Value          | Description                  |
+|----------------|------------------------------|
+| internalError  | Encounters an internal error |
+| clientError    | Client-side error            |
+| serverError    | Server-side error            |
+
 ## Common Types
 
 ### pathadaptor.Spec
@@ -1119,16 +1466,30 @@ Rules to revise request header.
 
 | Name          | Type   | Description                                                                                                 | Required |
 | ------------- | ------ | ----------------------------------------------------------------------------------------------------------- | -------- |
-| policy        | string | Load balance policy, valid values are `roundRobin`, `random`, `weightedRandom`, `ipHash` ,and `headerHash`  | Yes      |
+| policy        | string | Load balance policy, valid values are `roundRobin`, `random`, `weightedRandom`, `ipHash`, `headerHash` and `forward`, the last one is only used in `GRPCProxy`  | Yes      |
 | headerHashKey | string | When `policy` is `headerHash`, this option is the name of a header whose value is used for hash calculation | No       |
 | stickySession | [proxy.StickySession](#proxyStickySessionSpec) | Sticky session spec                                                 | No       |
+| healthCheck | [proxy.HealthCheck](#proxyHealthCheckSpec) | Health check spec, note that healthCheck is not needed if you are using service registry | No       |
+| forwardKey | string | The value of this field is a header name of the incoming request, the value of this header is address of the target server (host:port), and the request will be sent to this address | No |
 
 ### proxy.StickySessionSpec
 
 | Name          | Type   | Description                                                                                                 | Required |
 | ------------- | ------ | ----------------------------------------------------------------------------------------------------------- | -------- |
-| mode          | string | Mode of session stickiness, only `CookieConsistentHash` is supported by now                                 | Yes      |
-| appCookieName | string | Name of the application cookie, its value will be used as the session identifier for stickiness             | Yes      |
+| mode          | string | Mode of session stickiness, support `CookieConsistentHash`,`DurationBased`,`ApplicationBased`                                 | Yes      |
+| appCookieName | string | Name of the application cookie, its value will be used as the session identifier for stickiness in `CookieConsistentHash` and `ApplicationBased` mode             | No      |
+| lbCookieName | string | Name of the cookie generated by load balancer, its value will be used as the session identifier for stickiness in `DurationBased` and `ApplicationBased` mode, default is `EG_SESSION`             | No      |
+| lbCookieExpire | string | Expire duration of the cookie generated by load balancer, its value will be used as the session expire time for stickiness in `DurationBased` and `ApplicationBased` mode, default is 2 hours             | No      |
+
+### proxy.HealthCheckSpec
+
+| Name          | Type   | Description                                                                                                 | Required |
+| ------------- | ------ | ----------------------------------------------------------------------------------------------------------- | -------- |
+| interval | string | Interval duration for health check, default is 60s | Yes |
+| path | string | Path URL for server health check | No |
+| timeout | string | Timeout duration for health check, default is 3s | No |
+| fails | int | Consecutive fails count for assert fail, default is 1 | No |
+| passes | int | Consecutive passes count for assert pass , default is 1 | No |
 
 ### proxy.MemoryCacheSpec
 
@@ -1149,14 +1510,47 @@ Polices:
 
 | Name | Type | Description | Required |
 | ---- | ---- | ----------- | -------- |
-｜ policy | string | Policy used to match requests, support `general`, `ipHash`, `headerHash`, `random` | No |
-| headers     | map[string][proxy.StringMatcher](#proxystringmatcher) | Request header filter options. The key of this map is header name, and the value of this map is header value match criteria | No       |
+| policy | string | Policy used to match requests, support `general`, `ipHash`, `headerHash`, `random` | No |
+| headers     | map[string][StringMatcher](#stringmatcher) | Request header filter options. The key of this map is header name, and the value of this map is header value match criteria | No       |
 | urls        | [][proxy.MethodAndURLMatcher](#proxyMethodAndURLMatcher)                  | Request URL match criteria                                                                                                  | No       |
 | permil | uint32 | the probability of requests been matched. Value between 0 to 1000 | No       |
 | matchAllHeaders | bool | All rules in headers should be match | No |
 | headerHashKey | string | Used by policy `headerHash`. | No |
 
-### proxy.StringMatcher
+### grpcproxy.ServerPoolSpec
+
+| Name            | Type                                   | Description                                                                                                  | Required |
+| --------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------- |
+| spanName        | string                                 | Span name for tracing, if not specified, the `url` of the target server is used                              | No       |
+| serverTags      | []string                               | Server selector tags, only servers have tags in this array are included in this pool                         | No       |
+| servers         | [][proxy.Server](#proxyServer)         | An array of static servers. If omitted, `serviceName` and `serviceRegistry` must be provided, and vice versa | No       |
+| serviceName     | string                                 | This option and `serviceRegistry` are for dynamic server discovery                                           | No       |
+| serviceRegistry | string                                 | This option and `serviceName` are for dynamic server discovery                                               | No       |
+| loadBalance     | [proxy.LoadBalance](#proxyLoadBalanceSpec) | Load balance options                                                                                         | Yes      |
+| filter          | [grpcproxy.RequestMatcherSpec](#grpcproxyrequestmatcherspec)     | Filter options for candidate pools                                                                           | No       |
+| circuitBreakerPolicy | string | CircuitBreaker policy name | No |
+
+
+### grpcproxy.RequestMatcherSpec
+
+Polices:
+- If the policy is empty or `general`, matcher match requests with `headers`, `urls` and `methods`.
+- If the policy is `ipHash`, the matcher match requests if their IP hash value is less than `permil``.
+- If the policy is `headerHash`, the matcher match requests if their header hash value is less than `permil`, use the key of `headerHashKey`.
+- If the policy is `random`, the matcher matches requests with probability `permil`/1000.
+
+| Name | Type | Description | Required |
+| ---- | ---- | ----------- | -------- |
+| policy | string | Policy used to match requests, support `general`, `ipHash`, `headerHash`, `random` | No |
+| headers     | map[string][StringMatcher](#stringmatcher) | Request header filter options. The key of this map is header name, and the value of this map is header value match criteria | No       |
+| urls        | [][proxy.MethodAndURLMatcher](#proxyMethodAndURLMatcher)                  | Request URL match criteria                                                                                                  | No       |
+| permil | uint32 | the probability of requests been matched. Value between 0 to 1000 | No       |
+| matchAllHeaders | bool | All rules in headers should be match | No |
+| headerHashKey | string | Used by policy `headerHash`. | No |
+| methods | [][StringMatcher](#stringmatcher) | Method name filter options. | No |
+
+
+### StringMatcher
 
 The relationship between `exact`, `prefix`, and `regex` is `OR`.
 
@@ -1174,7 +1568,7 @@ The relationship between `methods` and `url` is `AND`.
 | Name    | Type                                       | Description                                                      | Required |
 | ------- | ------------------------------------------ | ---------------------------------------------------------------- | -------- |
 | methods | []string                                   | HTTP method criteria, Default is an empty list means all methods | No       |
-| url     | [proxy.StringMatcher](#proxystringmatcher) | Criteria to match a  URL                                          | Yes      |
+| url     | [StringMatcher](#stringmatcher) | Criteria to match a  URL                                          | Yes      |
 
 ### urlrule.URLRule
 
@@ -1183,7 +1577,7 @@ The relationship between `methods` and `url` is `AND`.
 | Name      | Type                                       | Description                                                      | Required |
 | --------- | ------------------------------------------ | ---------------------------------------------------------------- | -------- |
 | methods   | []string                                   | HTTP method criteria, Default is an empty list means all methods | No       |
-| url       | [urlrule.StringMatch](#urlruleStringMatch) | Criteria to match a URL                                          | Yes      |
+| url       | [StringMatcher](#StringMatcher) | Criteria to match a URL                                          | Yes      |
 | policyRef | string                                     | Name of resilience policy for matched requests                   | No       |
 
 
@@ -1208,8 +1602,10 @@ The relationship between `methods` and `url` is `AND`.
 | servers         | [][proxy.Server](#proxyServer)         | An array of static servers. If omitted, `serviceName` and `serviceRegistry` must be provided, and vice versa | No       |
 | serviceName     | string                                 | This option and `serviceRegistry` are for dynamic server discovery                                           | No       |
 | serviceRegistry | string                                 | This option and `serviceName` are for dynamic server discovery                                               | No       |
-| loadBalance     | [proxy.LoadBalance](#proxyLoadBalanceSpec) | Load balance options                                                                                         | Yes      |
-| filter          | [proxy.RequestMatcherSpec](#proxyrequestmatcherspec)     | Filter options for candidate pools                                                                           | No       |
+| serverMaxMsgSize | int                                   | Max server message size, default is 32768.                                                                   | No       |
+| clientMaxMsgSize | int                                   | Max client message size, default is 32768.                                                                   | No       |
+| loadBalance     | [proxy.LoadBalance](#proxyLoadBalanceSpec) | Load balance options                                                                                     | Yes      |
+| filter          | [proxy.RequestMatcherSpec](#proxyrequestmatcherspec)     | Filter options for candidate pools                                                         | No       |
 
 ### mock.Rule
 
@@ -1228,7 +1624,7 @@ The relationship between `methods` and `url` is `AND`.
 | path       | string            | Path match criteria, if request path is the value of this option, then the response of the request is mocked according to this rule                 | No       |
 | pathPrefix | string            | Path prefix match criteria, if request path begins with the value of this option, then the response of the request is mocked according to this rule | No       |
 | matchAllHeaders | bool          | Whether to match all headers | No       |
-| headers    | map[string][url.StringMatch](#urlrulestringmatch) | Headers to match, key is a header name, value is the rule to match the header value | No |
+| headers    | map[string][StringMatcher](#stringmatcher) | Headers to match, key is a header name, value is the rule to match the header value | No |
 
 
 ### ratelimiter.Policy
@@ -1256,6 +1652,30 @@ The relationship between `methods` and `url` is `AND`.
  | publicKey  | string | The public key is used for `RS256`,`RS384`,`RS512`,`ES256`,`ES384`,`ES512` or `EdDSA` validation in hex encoding                                       | Yes      |
 | secret     | string | The secret is for `HS256`,`HS384`,`HS512` validation  in hex encoding                                                                                  | Yes      |
 
+### validator.BasicAuthValidatorSpec
+
+| Name         | Type   | Description                                                                                                                                           | Required |
+|--------------|--------|------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| mode         | string | The mode of basic authentication, valid values are `FILE`, `ETCD` and `LDAP`                                             | Yes      |
+| userFile     | string | The user file used for `FILE` mode                                               | No       |
+| etcdPrefix   | string | The etcd prefix used for `ETCD` mode                                               | No       |
+| ldap         | [basicAuth.LDAPSpec](#basicAuthLDAPSpec)   | The LDAP configuration used for `LDAP` mode                 | No       |
+
+### basicAuth.LDAPSpec
+
+| Name         | Type   | Description                                                             | Required |
+|--------------|--------|-------------------------------------------------------------------------|----------|
+| host         | string | The host of the LDAP server                                             | Yes      |
+| port         | int    | The port of the LDAP server                                             | Yes      |
+| baseDN       | string | The base dn of the LDAP server, e.g. `ou=users,dc=example,dc=org`       | Yes      |
+| uid          | string | The user attribute used to bind user, e.g. `cn`                         | Yes      |
+| useSSL       | bool   | Whether to use SSL                                                      | No       |
+| skipTLS      | bool   | Whether to skip `StartTLS`                                              | No       |
+| insecure     | bool   | Whether to skip verifying LDAP server's certificate chain and host name | No       |
+| serverName   | string | Server name used to verify certificate when `insecure` is `false`       | No       |
+| certBase64   | string | Base64 encoded certificate                                              | No       |
+| keyBase64    | string | Base64 encoded key                                                      | No       |
+
 ### signer.Spec
 
 | Name        | Type                             | Description                                                               | Required |
@@ -1271,10 +1691,11 @@ The relationship between `methods` and `url` is `AND`.
 
 ### signer.HeaderHoisting
 
-| Name | Type | Description | Required |
-| allowedPrefix | []string | Allowed prefix for headers | No |
-| disallowedPrefix | []string | Disallowed prefix for headers | No |
-| disallowed | []string | Disallowed headers | No |
+| Name             | Type     | Description                   | Required |
+|------------------|----------|-------------------------------|----------|
+| allowedPrefix    | []string | Allowed prefix for headers    | No       |
+| disallowedPrefix | []string | Disallowed prefix for headers | No       |
+| disallowed       | []string | Disallowed headers            | No       |
 
 ### signer.Literal
 
@@ -1419,3 +1840,20 @@ result YAML varies from filters and protocols.
   | statusCode | int | HTTP status code, default is 200.  | No |
   | headers | map[string][]string | Headers of the result request. | No |
   | body | string | Body of the result request. | No |
+
+* **Schema of RequestAdaptor**
+
+| Name | Type | Description | Required |
+|------|------|-------------|----------|
+| method     | string                                       | If provided, the method of the original request is replaced by the value of this option                                                                                                                             | No       |
+| path       | [pathadaptor.Spec](#pathadaptorSpec)         | Rules to revise request path                                                                                                                                                                                        | No       |
+| header     | [httpheader.AdaptSpec](#httpheaderAdaptSpec) | Rules to revise request header                                                                                                                                                                                      | No       |
+| body       | string                                       | If provided the body of the original request is replaced by the value of this option. | No       |
+| host       | string                                       | If provided the host of the original request is replaced by the value of this option. | No       |
+
+* **Schema of ResponseAdaptor**
+
+| Name | Type | Description | Required |
+|------|------|-------------|----------|
+| header | [httpheader.AdaptSpec](#httpheaderAdaptSpec) | Rules to revise request header    | No       |
+| body   | string   | If provided the body of the original request is replaced by the value of this option. | No       |

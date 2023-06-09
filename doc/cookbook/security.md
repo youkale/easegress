@@ -209,8 +209,8 @@ filters:
       cookieName: auth
       algorithm: HS256
       secret: 6d7973656372657
-       - name: proxy
   - kind: Proxy
+    name: proxy
     pools:
     - servers:
       - url: http://127.0.0.1:9095
@@ -300,8 +300,8 @@ filters:
 
 1. https://en.wikipedia.org/wiki/JSON_Web_Token
 2. https://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html
-3. https://github.com/megaease/easegress/blob/main/doc/filters.md#signerliteral
+3. https://github.com/megaease/easegress/blob/main/doc/reference/filters.md#signerliteral
 4. https://oauth.net/2/
-5. https://github.com/megaease/easegress/blob/main/doc/filters.md#validatorOAuth2JWT
+5. https://github.com/megaease/easegress/blob/main/doc/reference/filters.md#validatoroauth2jwt
 6. https://en.wikipedia.org/wiki/Basic_access_authentication
 7. https://manpages.debian.org/testing/apache2-utils/htpasswd.1.en.html

@@ -1,12 +1,12 @@
 # Easegress
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/megaease/easegress)](https://goreportcard.com/report/github.com/megaease/easegress)
-[![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/megaease/easegress/Test/main)](https://github.com/megaease/easegress/actions/workflows/test.yml)
+[![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/megaease/easegress/test.yml?branch=main)](https://github.com/megaease/easegress/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/megaease/easegress/branch/main/graph/badge.svg?token=5Q80B98LPI)](https://codecov.io/gh/megaease/easegress)
 [![Docker pulls](https://img.shields.io/docker/pulls/megaease/easegress.svg)](https://hub.docker.com/r/megaease/easegress)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/megaease/easegress)](https://github.com/megaease/easegress/blob/main/go.mod)
-[![Join MegaEase Slack](https://img.shields.io/badge/slack-megaease-brightgreen?logo=slack)](https://join.slack.com/t/openmegaease/shared_invite/zt-upo7v306-lYPHvVwKnvwlqR0Zl2vveA) 
+[![Join MegaEase Slack](https://img.shields.io/badge/slack-megaease-brightgreen?logo=slack)](https://join.slack.com/t/openmegaease/shared_invite/zt-upo7v306-lYPHvVwKnvwlqR0Zl2vveA)
 
 <a href="https://megaease.com/easegress">
     <img src="./doc/imgs/easegress.svg"
@@ -52,7 +52,7 @@
     - HTTP/2
     - HTTP/3(QUIC)
     - MQTT
-  - **路由规则**：精确路径、路径前缀、路径的正则表达式、方法、标头。
+  - **路由规则**：精确路径、路径前缀、路径的正则表达式、方法、标头、客户端IP地址。
   - **弹性和容错**。
     - **断路器**： 暂时阻止可能的故障。
     - **速率限制**： 限制请求的速率。
@@ -94,8 +94,7 @@
 - **操作**
   - **易于集成**：命令行(`egctl`)、MegaEase Portal，以及 HTTP 客户端，如 curl、postman 等。
   - **分布式跟踪**
-    - 内置 [Open Zipkin](https://zipkin.io/)
-    - [Open Tracing](https://opentracing.io/)，提供厂商中立的 API。
+    - 内置 [OpenTelemetry](https://opentelemetry.io/)，提供厂商中立的 API。
   - **可观察性**
     - **节点**：角色（primary、secondary）、是不是Leader，健康状态、最后一次心跳时间，等等。
     - **多维度的服务器和后端流量数据**
@@ -111,12 +110,14 @@
 
 - [API 聚合](./doc/cookbook/api-aggregation.md) - 将多个 API 聚合为一个。
 - [Easegress 集群化部署](./doc/cookbook/multi-node-cluster.md) - Easegress 如何进行集群化多点部署。
+- [灰度部署](./doc/cookbook/canary-release.md) - 如何使用 Easegress 进行灰度部署。
 - [分布式调用链](./doc/cookbook/distributed-tracing.md) - 如何使用 Zipkin 进行 APM 追踪。
 - [函数即服务 FaaS](./doc/cookbook/faas.md) - 支持 Knative FaaS 集成。
 - [高并发秒杀](./doc/cookbook/flash-sale.md) - 如何使用 Easegress 进行高并发的秒杀活动。
 - [Kubernetes入口控制器](./doc/cookbook/k8s-ingress-controller.md) - 如何作为入口控制器与 Kubernetes 集成。
 - [负载均衡](./doc/cookbook/load-balancer.md) - 各种负载均衡策略。
 - [MQTT代理](./doc/cookbook/mqtt-proxy.md) - 支持 Kafka 作为后端的 MQTT 代理
+- [多 API 编排](./doc/cookbook/translation-bot.md) - 通过多 API 编排实现 Telegram 翻译机器人.
 - [高性能](./doc/cookbook/performance.md) - 性能优化，压缩、缓存等。
 - [管道编排](./doc/cookbook/pipeline.md) - 如何编排 HTTP 过滤器来处理请求和应答。
 - [弹力和容错设计](./doc/cookbook/resilience.md) - 断路器、速率限制、重试、时间限制等（移植自[Java resilience4j](https://github.com/resilience4j/resilience4j)
@@ -153,7 +154,7 @@ make
 
 > **注意事项**：
 >
-> - 我们需要 Go 1.18 以上版本的编译器
+> - 我们需要 Go 1.19 以上版本的编译器
 > - 如果需要支持 WebAssembly 的版本，你需要运行 `make wasm`
 
 然后把二进制所在目录添加到 `PATH` 中，并启动服务：
@@ -182,13 +183,13 @@ Makefile 默认会将两个二进制文件编译到 `bin/` 目录中。`bin/ease
 如果启动时不指定任何参数，`easegress-server` 会默认使用端口 2379、2380 和 2381。我们可以在配置文件中更改默认端口，或者在命令行启动时指定相关参数（参数具体释义可通过执行 `easegress-server --help` 命令获取）。
 
 ```bash
-$ egctl member list | grep "cluster-role"
-    cluster-role: primary
-$ egctl member list | grep "api-addr"
-    api-addr: localhost:2381
-$ egctl member list | grep "name"
-    name: eg-default-name
-    cluster-name: eg-cluster-default-name
+$ egctl member list | grep "ClusterRole"
+    ClusterRole: primary
+$ egctl member list | grep "APIAddr"
+    APIAddr: localhost:2381
+$ egctl member list | grep "Name"
+    ClusterName: eg-cluster-default-name
+    Name: eg-default-name
 $ egctl member list | grep "id"
     id: 689e371e88f78b6a
 ```
@@ -234,6 +235,12 @@ filters:
 
 这条 Pipeline 的定义是将请求按轮询的方式分发到三个后端服务实例上。
 
+此外，我们也提供一个 [仪表盘](https://cloud.megaease.cn) 来简化上述步骤。 您可以
+通过这个工具创建和管理 HTTPServer、Pipeline 以及其他 Easegress 配置。
+
+![HTTP Server](doc/imgs/readme-httpserver.png)
+![Pipeline](doc/imgs/readme-pipeline.png)
+
 ### 测试
 
 现在可以使用一个 HTTP 客户端，如 `curl` 进行测试：
@@ -257,7 +264,7 @@ Body  : Hello, Easegress
 
 ### 添加一条新的 Pipeline
 
-现在我们添加一条新的 Pipeline，它会从请求中提取出一个 RSS feed 的地址，并将其中的文章列表组织成一条 Slack 消息发送到 Slack。在执行下面的命令之前，请务必按照[这个文档](https://api.slack.com/messaging/webhooks)创建你自己的 Slack WebHook URL，并用它替换掉下面命令中的那个。 
+现在我们添加一条新的 Pipeline，它会从请求中提取出一个 RSS feed 的地址，并将其中的文章列表组织成一条 Slack 消息发送到 Slack。在执行下面的命令之前，请务必按照[这个文档](https://api.slack.com/messaging/webhooks)创建你自己的 Slack WebHook URL，并用它替换掉下面命令中的那个。
 
 <p align="center">
   <img src="./doc/imgs/rss-pipeline.png" width=480>

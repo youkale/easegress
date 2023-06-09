@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+// Package mqttproxy implements the MQTTProxy.
 package mqttproxy
 
 import (
@@ -89,23 +90,24 @@ func updatePort(urlStr string, hostWithPort string) (string, error) {
 	return u.String(), nil
 }
 
-func memberURLFunc(superSpec *supervisor.Spec) func(string, string) ([]string, error) {
+func memberURLFunc(superSpec *supervisor.Spec) func(string, string) (map[string]string, error) {
 	c := superSpec.Super().Cluster()
 
-	f := func(egName, name string) ([]string, error) {
+	f := func(egName, name string) (map[string]string, error) {
 		logger.SpanDebugf(nil, "get member url for %v %v", egName, name)
 		kv, err := c.GetPrefix(c.Layout().StatusMemberPrefix())
 		if err != nil {
 			logger.SpanErrorf(nil, "cluster get member list failed: %v", err)
-			return []string{}, err
+			return map[string]string{}, err
 		}
-		urls := []string{}
+		// urls := []string{}
+		urls := make(map[string]string)
 		for _, v := range kv {
 			memberStatus := cluster.MemberStatus{}
 			err := codectool.Unmarshal([]byte(v), &memberStatus)
 			if err != nil {
 				logger.SpanErrorf(nil, "cluster status unmarshal failed: %v", err)
-				return []string{}, err
+				return map[string]string{}, err
 			}
 			if memberStatus.Options.Name != egName {
 				egURLs := memberStatus.Options.Cluster.InitialAdvertisePeerURLs
@@ -123,7 +125,8 @@ func memberURLFunc(superSpec *supervisor.Spec) func(string, string) ([]string, e
 				if err != nil {
 					return nil, fmt.Errorf("get url for %v failed: %v", memberStatus.Options.Name, err)
 				}
-				urls = append(urls, newURL+"/apis/v2"+fmt.Sprintf(mqttAPITopicPublishPrefix, name))
+				// urls = append(urls, newURL+"/apis/v2"+fmt.Sprintf(mqttAPITopicPublishPrefix, name))
+				urls[memberStatus.Options.Name] = newURL + "/apis/v2" + fmt.Sprintf(mqttAPITopicPublishPrefix, name)
 			}
 		}
 		logger.SpanDebugf(nil, "eg %v %v get urls %v", egName, name, urls)
@@ -147,7 +150,7 @@ func (mp *MQTTProxy) Init(superSpec *supervisor.Spec, muxMapper context.MuxMappe
 	mp.broker.registerAPIs()
 }
 
-// Inherit inherits previous generation of WebSocketServer.
+// Inherit inherits previous generation of MQTTProxy.
 func (mp *MQTTProxy) Inherit(superSpec *supervisor.Spec, previousGeneration supervisor.Object, muxMapper context.MuxMapper) {
 	previousGeneration.Close()
 	mp.Init(superSpec, muxMapper)

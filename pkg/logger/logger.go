@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+// Package logger provides logger for Easegress.
 package logger
 
 import (
@@ -22,6 +23,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/go-logr/zapr"
+	"go.opentelemetry.io/otel"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -36,6 +40,7 @@ func Init(opt *option.Options) {
 	initDefault(opt)
 	initHTTPFilter(opt)
 	initRestAPI(opt)
+	initOTel(opt)
 }
 
 // InitNop initializes all logger as nop, mainly for unit testing
@@ -67,6 +72,7 @@ const (
 	filterHTTPAccessFilename = "filter_http_access.log"
 	filterHTTPDumpFilename   = "filter_http_dump.log"
 	adminAPIFilename         = "admin_api.log"
+	otelFilename             = "otel.log"
 
 	// EtcdClientFilename is the filename of etcd client log.
 	EtcdClientFilename = "etcd_client.log"
@@ -174,6 +180,11 @@ func initHTTPFilter(opt *option.Options) {
 
 func initRestAPI(opt *option.Options) {
 	restAPILogger = newPlainLogger(opt, adminAPIFilename, systemLogMaxCacheCount)
+}
+
+func initOTel(opt *option.Options) {
+	otelLogger := newPlainLogger(opt, otelFilename, trafficLogMaxCacheCount)
+	otel.SetLogger(zapr.NewLogger(otelLogger.Desugar()))
 }
 
 func newPlainLogger(opt *option.Options, filename string, maxCacheCount uint32) *zap.SugaredLogger {

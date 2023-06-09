@@ -19,6 +19,7 @@ package worker
 
 import (
 	"fmt"
+	"github.com/megaease/easegress/pkg/object/httpserver/routers"
 	"sync"
 
 	"github.com/megaease/easegress/pkg/logger"
@@ -354,16 +355,17 @@ func (egs *EgressServer) listServiceOfTrafficTarget(tts []*spec.TrafficTarget) m
 }
 
 // regex rule: ^(\w+\.)*vet-services\.(\w+)\.svc\..+$
-//  can match e.g. _tcp.vet-services.easemesh.svc.cluster.local
-//   		   vet-services.easemesh.svc.cluster.local
-//   		   _zip._tcp.vet-services.easemesh.svc.com
+//
+//	can match e.g. _tcp.vet-services.easemesh.svc.cluster.local
+//	 		   vet-services.easemesh.svc.cluster.local
+//	 		   _zip._tcp.vet-services.easemesh.svc.com
 func (egs *EgressServer) buildHostRegex(serviceName string) string {
 	return `^(\w+\.)*` + serviceName + `\.(\w+)\.svc\..+`
 }
 
-func (egs *EgressServer) buildMuxRule(pipelineName, serviceName string, matches []spec.HTTPMatch) []*httpserver.Rule {
-	var rules []*httpserver.Rule
-	headers := []*httpserver.Header{
+func (egs *EgressServer) buildMuxRule(pipelineName, serviceName string, matches []spec.HTTPMatch) []*routers.Rule {
+	var rules []*routers.Rule
+	headers := []*routers.Header{
 		{
 			Key: egressRPCKey,
 			// Value should be the service name
@@ -377,8 +379,8 @@ func (egs *EgressServer) buildMuxRule(pipelineName, serviceName string, matches 
 			methods = nil
 		}
 
-		rule := &httpserver.Rule{
-			Paths: []*httpserver.Path{
+		rule := &routers.Rule{
+			Paths: []*routers.Path{
 				{
 					Methods:    methods,
 					PathRegexp: "^" + m.PathRegex,
@@ -459,11 +461,11 @@ func (egs *EgressServer) reload() {
 	httpServerSpec.Rules = nil
 
 	for serviceName := range lgSvcs {
-		rule := &httpserver.Rule{
-			Paths: []*httpserver.Path{
+		rule := &routers.Rule{
+			Paths: []*routers.Path{
 				{
 					PathPrefix: "/",
-					Headers: []*httpserver.Header{
+					Headers: []*routers.Header{
 						{
 							Key: egressRPCKey,
 							// Value should be the service name
@@ -479,10 +481,10 @@ func (egs *EgressServer) reload() {
 		// for matching only host name request
 		//   1) try exactly matching
 		//   2) try matching with regexp
-		ruleHost := &httpserver.Rule{
+		ruleHost := &routers.Rule{
 			Host:       serviceName,
 			HostRegexp: egs.buildHostRegex(serviceName),
-			Paths: []*httpserver.Path{
+			Paths: []*routers.Path{
 				{
 					PathPrefix: "/",
 					// this name should be the pipeline full name

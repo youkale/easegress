@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+// Package main is the entry point of the simple mirror server.
 package main
 
 import (
@@ -25,7 +26,7 @@ import (
 	"time"
 )
 
-// TeeWriter is an io.Writer wapper.
+// TeeWriter is an io.Writer wrapper.
 type TeeWriter struct {
 	writers []io.Writer
 }

@@ -51,7 +51,7 @@ name: pipeline-reverse-proxy
 kind: Pipeline
 flow:
   - filter: requestAdaptor
-  - fitter: proxy
+  - filter: proxy
   - filter: responseAdaptor
 filters:
   - name: requestAdaptor
@@ -59,7 +59,7 @@ filters:
     host: easegress.megaease.com
     method: POST
     path:
-    addPrefix: /apis/v2
+      addPrefix: /apis/v2
     header:
       set:
         X-Api-Version: v2
@@ -88,7 +88,7 @@ name: pipeline-reverse-proxy
 kind: Pipeline
 flow:
   - filter: requestAdaptor
-  - fitter: proxy
+  - filter: proxy
   - filter: responseAdaptor
 filters:
   - name: requestAdaptor
@@ -96,7 +96,7 @@ filters:
     host: easegress.megaease.com
     method: POST
     path:
-    addPrefix: /apis/v2
+      trimPrefix: /apis/v2
     header:
       set:
         X-Api-Version: v2

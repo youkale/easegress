@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+// Package service provides business layer between mesh and store.
 package service
 
 import (
@@ -48,8 +49,6 @@ type (
 
 // New creates a service with spec
 func New(superSpec *supervisor.Spec) *Service {
-	superSpec.Super().Cluster().Layout().CustomDataKindPrefix()
-	superSpec.Super().Cluster().Layout().CustomDataPrefix()
 	kindPrefix := layout.CustomResourceKindPrefix()
 	dataPrefix := layout.AllCustomResourcePrefix()
 	s := &Service{

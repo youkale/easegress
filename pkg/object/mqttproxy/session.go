@@ -20,6 +20,7 @@ package mqttproxy
 import (
 	"encoding/base64"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/eclipse/paho.mqtt.golang/packets"
@@ -28,6 +29,8 @@ import (
 
 	"github.com/openzipkin/zipkin-go/model"
 )
+
+const defaultRetryInterval = 30 * time.Second
 
 type (
 	// SessionInfo is info about session that will be put into etcd for persistency
@@ -51,6 +54,9 @@ type (
 		pending      map[uint16]*Message
 		pendingQueue []uint16
 		nextID       uint16
+		// retry Qos1 packet
+		retryInterval time.Duration
+		refreshStore  atomic.Value
 	}
 
 	// Message is the message send from broker to client
@@ -71,19 +77,39 @@ func newMsg(topic string, payload []byte, qos byte) *Message {
 }
 
 func (s *Session) store() {
-	logger.SpanDebugf(nil, "session %v store", s.info.ClientID)
-	str, err := s.encode()
-	if err != nil {
-		logger.SpanErrorf(nil, "encode session %+v failed: %v", s, err)
+	if swapped := s.refreshStore.CompareAndSwap(true, false); !swapped {
 		return
 	}
-	ss := SessionStore{
-		key:   s.info.ClientID,
-		value: str,
-	}
-	go func() {
-		s.storeCh <- ss
+
+	ss := func() *SessionStore {
+		s.Lock()
+		str, err := s.encode()
+		s.Unlock()
+		if err != nil {
+			logger.Errorf("encode session %+v failed: %v", s, err)
+			return nil
+		}
+
+		return &SessionStore{
+			key:   s.info.ClientID,
+			value: str,
+		}
 	}()
+	if ss == nil {
+		return
+	}
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	select {
+	case s.storeCh <- *ss:
+		logger.Infof("session: %s  store:%s", s.info.ClientID, ss.value)
+		return
+	case <-ticker.C:
+		logger.Infof("session: %s  store:%s, timeout", s.info.ClientID, ss.value)
+		s.refreshStore.Store(true)
+		return
+	}
 }
 
 func (s *Session) encode() (string, error) {
@@ -95,7 +121,10 @@ func (s *Session) encode() (string, error) {
 }
 
 func (s *Session) decode(str string) error {
-	return codectool.Unmarshal([]byte(str), s.info)
+	if s.info == nil {
+		s.info = &SessionInfo{}
+	}
+	return codectool.UnmarshalJSON([]byte(str), s.info)
 }
 
 func (s *Session) init(sm *SessionManager, b *Broker, connect *packets.ConnectPacket) error {
@@ -104,6 +133,7 @@ func (s *Session) init(sm *SessionManager, b *Broker, connect *packets.ConnectPa
 	s.done = make(chan struct{})
 	s.pending = make(map[uint16]*Message)
 	s.pendingQueue = []uint16{}
+	s.retryInterval = time.Second * time.Duration(b.spec.RetryInterval)
 
 	s.info = &SessionInfo{}
 	s.info.EGName = b.egName
@@ -118,7 +148,8 @@ func (s *Session) updateEGName(egName, name string) {
 	s.Lock()
 	s.info.EGName = egName
 	s.info.Name = name
-	s.store()
+	// s.store()
+	s.refreshStore.Store(true)
 	s.Unlock()
 }
 
@@ -128,7 +159,8 @@ func (s *Session) subscribe(topics []string, qoss []byte) error {
 	for i, t := range topics {
 		s.info.Topics[t] = int(qoss[i])
 	}
-	s.store()
+	// s.store()
+	s.refreshStore.Store(true)
 	s.Unlock()
 	return nil
 }
@@ -139,7 +171,8 @@ func (s *Session) unsubscribe(topics []string) error {
 	for _, t := range topics {
 		delete(s.info.Topics, t)
 	}
-	s.store()
+	// s.store()
+	s.refreshStore.Store(true)
 	s.Unlock()
 	return nil
 }
@@ -169,31 +202,25 @@ func (s *Session) getPacketFromMsg(topic string, payload []byte, qos byte) *pack
 	return p
 }
 
-func (s *Session) publish(span *model.SpanContext, topic string, payload []byte, qos byte) {
-	client := s.broker.getClient(s.info.ClientID)
-	if client == nil {
-		logger.SpanErrorf(span, "client %s is offline in eg %v", s.info.ClientID, s.broker.egName)
+func (s *Session) publish(span *model.SpanContext, client *Client, topic string, payload []byte, qos byte) {
+	p := func() packets.ControlPacket {
+		s.Lock()
+		defer s.Unlock()
+		logger.SpanDebugf(span, "session %v publish %v", s.info.ClientID, topic)
+		p := s.getPacketFromMsg(topic, payload, qos)
+		if qos == QoS1 {
+			msg := newMsg(topic, payload, qos)
+			s.pending[p.MessageID] = msg
+			s.pendingQueue = append(s.pendingQueue, p.MessageID)
+		}
+		return p
+	}()
+
+	if qos == QoS2 {
+		logger.SpanErrorf(span, "publish message with qos=2 is not supported currently")
 		return
 	}
-
-	s.Lock()
-	defer s.Unlock()
-
-	logger.SpanDebugf(span, "session %v publish %v", s.info.ClientID, topic)
-	p := s.getPacketFromMsg(topic, payload, qos)
-	if qos == QoS0 {
-		select {
-		case client.writeCh <- p:
-		default:
-		}
-	} else if qos == QoS1 {
-		msg := newMsg(topic, payload, qos)
-		s.pending[p.MessageID] = msg
-		s.pendingQueue = append(s.pendingQueue, p.MessageID)
-		client.writePacket(p)
-	} else {
-		logger.SpanErrorf(span, "publish message with qos=2 is not supported currently")
-	}
+	client.writePacket(p)
 }
 
 func (s *Session) puback(p *packets.PubackPacket) {
@@ -212,40 +239,57 @@ func (s *Session) close() {
 
 func (s *Session) doResend() {
 	client := s.broker.getClient(s.info.ClientID)
-	s.Lock()
-	defer s.Unlock()
-
-	if len(s.pending) == 0 {
-		s.pendingQueue = []uint16{}
-		return
-	}
-	for i, idx := range s.pendingQueue {
-		if val, ok := s.pending[idx]; ok {
-			// find first msg need to resend
-			s.pendingQueue = s.pendingQueue[i:]
-			p := packets.NewControlPacket(packets.Publish).(*packets.PublishPacket)
-			p.Qos = byte(val.QoS)
-			p.TopicName = val.Topic
-			payload, err := base64.StdEncoding.DecodeString(val.B64Payload)
-			if err != nil {
-				logger.SpanErrorf(nil, "base64 decode error for Message B64Payload %s", err)
-				return
-			}
-			p.Payload = payload
-			p.MessageID = idx
-			if client != nil {
-				client.writePacket(p)
-			} else {
-				logger.SpanDebugf(nil, "session %v do resend but client is nil", s.info.ClientID)
-			}
+	msg, messageID := func() (msg *Message, messageID uint16) {
+		s.Lock()
+		defer s.Unlock()
+		if len(s.pending) == 0 {
+			s.pendingQueue = []uint16{}
 			return
 		}
+		for i, idx := range s.pendingQueue {
+			if val, ok := s.pending[idx]; ok {
+				// find first msg need to resend
+				s.pendingQueue = s.pendingQueue[i:]
+				msg = val
+				messageID = idx
+				break
+			}
+		}
+		return
+	}()
+
+	if msg == nil {
+		return
+	}
+
+	p := packets.NewControlPacket(packets.Publish).(*packets.PublishPacket)
+	p.Qos = byte(msg.QoS)
+	p.TopicName = msg.Topic
+	payload, err := base64.StdEncoding.DecodeString(msg.B64Payload)
+	if err != nil {
+		logger.Errorf("client:%s, base64 decode error for Message B64Payload %s ", s.info.ClientID, err)
+		return
+	}
+	p.Payload = payload
+	p.MessageID = messageID
+	if client != nil {
+		client.writePacket(p)
+	} else {
+		logger.Warnf("client %v do resend but client is nil, ignored", s.info.ClientID)
 	}
 }
 
-func (s *Session) backgroundResendPending() {
+// backgroundSessionTask process two tasks peroidly:
+// - task 1: sync the session information to global etcd store
+// - task 2: resend the packet to the subscriber with QoS 1 or 2
+func (s *Session) backgroundSessionTask() {
+	if s.retryInterval <= 0 {
+		logger.Warnf("invalid s.retryInterval :%d, mandatory setting to 30s", s.retryInterval)
+		s.retryInterval = defaultRetryInterval
+	}
+	resendTime := time.Now().Add(s.retryInterval)
 	debugLogTime := time.Now().Add(time.Minute)
-	ticker := time.NewTicker(200 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -253,7 +297,11 @@ func (s *Session) backgroundResendPending() {
 		case <-s.done:
 			return
 		case <-ticker.C:
-			s.doResend()
+			s.store()
+			if time.Now().After(resendTime) {
+				s.doResend()
+				resendTime = time.Now().Add(s.retryInterval)
+			}
 		}
 		if time.Now().After(debugLogTime) {
 			logger.SpanDebugf(nil, "session %v resend", s.info.ClientID)

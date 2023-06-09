@@ -1,5 +1,85 @@
 # Changelog
 
+## [v2.4.2](https://github.com/megaease/easegress/tree/v2.4.2) (2023-06-08)
+
+[Full Changelog](https://github.com/megaease/easegress/compare/v2.4.1...v2.4.2)
+
+**Implemented enhancements:**
+* GRPCProxy use connection pool to manage connections (#977).
+* Enhance SimpleHTTPProxy to support forward proxy (#1016).
+
+**Fixed bugs:**
+* Websocket does not work (#998).
+* Fix typo and other problems in the documentation (#999). 
+
+## [v2.4.1](https://github.com/megaease/easegress/tree/v2.4.1) (2023-04-21)
+
+[Full Changelog](https://github.com/megaease/easegress/compare/v2.4.0...v2.4.1)
+
+**Implemented enhancements:**
+* Add a new filter: Simple HTTP Proxy.
+* Add a Canary Release cookbook.
+* Add a ChatGPT Bot cookbook.
+
+**Fixed bugs:**
+* Fix the Sampler's incorrect result bug
+* Fix OIDCAdaptor bug.
+* Fix typo and other minor problems in the documentation. 
+
+## [v2.4.0](https://github.com/megaease/easegress/tree/v2.4.0) (2023-03-03)
+
+[Full Changelog](https://github.com/megaease/easegress/compare/v2.3.1...v2.4.0)
+
+**Significant changes:**
+* Support GRPC protocol.
+
+**Implemented enhancements:**
+* Enhancement to access log.
+* Enlarge charset allowed in object names.
+* Enhance tracing to support Cloudflare.
+* RequestAdaptor and ResponseAdaptor support template.
+
+**Fixed bugs:**
+* WASM apply data command not working.
+* install.sh not work as expectation on some platforms.
+* Fix typo and other minor problems in the documentation. 
+
+
+## [v2.3.1](https://github.com/megaease/easegress/tree/v2.3.1) (2022-12-28)
+
+[Full Changelog](https://github.com/megaease/easegress/compare/v2.3.0...v2.3.1)
+
+**Significant changes:**
+* Support OpenTelemetry for tracing.
+* Add new filter Redirector to handle HTTP 3xx redirects.
+* Add prometheus support for Proxy and HTTPServer.
+
+**Implemented enhancements:**
+* Add LDAP mode for basic authentication.
+* Add Broker mode for MQTTProxy.
+* Support HTTPS for egctl and easegress-server.
+* Enhance egctl delete.
+
+## [v2.3.0](https://github.com/megaease/easegress/tree/v2.3.0) (2022-11-28)
+
+[Full Changelog](https://github.com/megaease/easegress/compare/v2.2.0...v2.3.0)
+
+**Significant changes:**
+* HTTPServer: support radix tree router and routing by client IP.
+* Add new filter OPAFilter for Open Policy Agent.
+
+**Implemented enhancements:**
+* Load Balance: support session and server health check.
+* Making running objects dump interval configurable.
+* Simplify CORSAdaptor.
+
+**Fixed bugs:**
+* Fix unexpected EOF when compression is enabled.
+* Remove duplicated code in codectool.
+* Update keyfunc for compatibility and bug fixes.
+* Fix mqtt test random fail.
+
+
 ## [v2.2.0](https://github.com/megaease/easegress/tree/v2.2.0) (2022-10-18)
 
 [Full Changelog](https://github.com/megaease/easegress/compare/v2.1.1...v2.2.0)

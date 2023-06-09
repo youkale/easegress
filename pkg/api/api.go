@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+// Package api implements the HTTP API of Easegress.
 package api
 
 import (
@@ -105,6 +106,7 @@ func (s *Server) registerAPIs() {
 	group.Entries = append(group.Entries, s.aboutAPIEntries()...)
 	group.Entries = append(group.Entries, s.customDataAPIEntries()...)
 	group.Entries = append(group.Entries, s.profileAPIEntries()...)
+	group.Entries = append(group.Entries, s.prometheusMetricsAPIEntries()...)
 
 	for _, fn := range appendAddonAPIs {
 		fn(s, group)

@@ -1,12 +1,12 @@
 # Easegress
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/megaease/easegress)](https://goreportcard.com/report/github.com/megaease/easegress)
-[![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/megaease/easegress/Test/main)](https://github.com/megaease/easegress/actions/workflows/test.yml)
+[![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/megaease/easegress/test.yml?branch=main)](https://github.com/megaease/easegress/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/megaease/easegress/branch/main/graph/badge.svg?token=5Q80B98LPI)](https://codecov.io/gh/megaease/easegress)
 [![Docker pulls](https://img.shields.io/docker/pulls/megaease/easegress.svg)](https://hub.docker.com/r/megaease/easegress)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/megaease/easegress)](https://github.com/megaease/easegress/blob/main/go.mod)
-[![Join MegaEase Slack](https://img.shields.io/badge/slack-megaease-brightgreen?logo=slack)](https://join.slack.com/t/openmegaease/shared_invite/zt-upo7v306-lYPHvVwKnvwlqR0Zl2vveA) 
+[![Join MegaEase Slack](https://img.shields.io/badge/slack-megaease-brightgreen?logo=slack)](https://join.slack.com/t/openmegaease/shared_invite/zt-upo7v306-lYPHvVwKnvwlqR0Zl2vveA)
 
 <a href="https://megaease.com/easegress">
     <img src="./doc/imgs/easegress.svg"
@@ -53,7 +53,7 @@ The architecture of Easegress:
     - HTTP/2
     - HTTP/3(QUIC)
     - MQTT
-  - **Rich Routing Rules:** exact path, path prefix, regular expression of the path, method, headers.
+  - **Rich Routing Rules:** exact path, path prefix, regular expression of the path, method, headers, clientIPs.
   - **Resilience&Fault Tolerance**
     - **CircuitBreaker:** temporarily blocks possible failures.
     - **RateLimiter:** limits the rate of incoming requests.
@@ -95,8 +95,7 @@ The architecture of Easegress:
 - **Operation**
   - **Easy to Integrate:** command line(`egctl`), MegaEase Portal, HTTP clients such as curl, postman, etc.
   - **Distributed Tracing**
-    - Built-in [Open Zipkin](https://zipkin.io/)
-    - [Open Tracing](https://opentracing.io/) for vendor-neutral APIs
+    - Built-in [OpenTelemetry](https://opentelemetry.io/), which provides a vendor-neutral API.
   - **Observability**
     - **Node:** role(primary, secondary), raft leader status, healthy or not, last heartbeat time, and so on
     - **Traffic:** in multi-dimension: server and backend.
@@ -112,12 +111,14 @@ The following examples show how to use Easegress for different scenarios.
 
 - [API Aggregation](./doc/cookbook/api-aggregation.md) - Aggregating many APIs into a single API.
 - [Cluster Deployment](./doc/cookbook/multi-node-cluster.md) - How to deploy multiple Easegress cluster nodes.
+- [Canary Release](./doc/cookbook/canary-release.md) - How to do canary release with Easegress.
 - [Distributed Tracing](./doc/cookbook/distributed-tracing.md) - How to do APM tracing  - Zipkin.
 - [FaaS](./doc/cookbook/faas.md) - Supporting Knative FaaS integration
 - [Flash Sale](./doc/cookbook/flash-sale.md) - How to do high concurrent promotion sales with Easegress
 - [Kubernetes Ingress Controller](./doc/cookbook/k8s-ingress-controller.md) - How to integrate with Kubernetes as ingress controller
 - [LoadBalancer](./doc/cookbook/load-balancer.md) - A number of the strategies of load balancing
 - [MQTTProxy](./doc/cookbook/mqtt-proxy.md) - An Example to MQTT proxy with Kafka backend.
+- [Multiple API Orchestration](./doc/cookbook/translation-bot.md) - An Telegram translation bot.
 - [Performance](./doc/cookbook/performance.md) - Performance optimization - compression, caching etc.
 - [Pipeline](./doc/cookbook/pipeline.md) - How to orchestrate HTTP filters for requests/responses handling
 - [Resilience and Fault Tolerance](./doc/cookbook/resilience.md) - CircuitBreaker, RateLimiter, Retry, TimeLimiter, etc. (Porting from [Java resilience4j](https://github.com/resilience4j/resilience4j))
@@ -126,7 +127,6 @@ The following examples show how to use Easegress for different scenarios.
 - [WebAssembly](./doc/cookbook/wasm.md) - Using AssemblyScript to extend the Easegress
 - [WebSocket](./doc/cookbook/websocket.md) - WebSocket proxy for Easegress
 - [Workflow](./doc/cookbook/workflow.md) - An Example to make a workflow for a number of APIs.
-
 
 For full list, see [Cookbook](./doc/README.md#1-cookbook--how-to-guide).
 
@@ -144,7 +144,7 @@ We can download the latest or history binaries from the
 [release page](https://github.com/megaease/easegress/releases). The following
 shell script will:
 
-- Download and extract the latest binaries to `./easegress` folder  
+- Download and extract the latest binaries to `./easegress` folder
 - Install the Easegress Systemd service.
 
 ```bash
@@ -160,7 +160,7 @@ make
 
 > **Note**:
 >
-> - This repo requires Go 1.18+ compiler for the build.
+> - This repo requires Go 1.19+ compiler for the build.
 > - If you need the WebAssembly feature, please run `make wasm`.
 
 Then we can add the binary directory to the `PATH` and execute the server:
@@ -195,13 +195,13 @@ configuration file or command-line arguments that are explained well in
 `easegress-server --help`.
 
 ```bash
-$ egctl member list | grep "cluster-role"
-    cluster-role: primary
-$ egctl member list | grep "api-addr"
-    api-addr: localhost:2381
-$ egctl member list | grep "name"
-    name: eg-default-name
-    cluster-name: eg-cluster-default-name
+$ egctl member list | grep "ClusterRole"
+    ClusterRole: primary
+$ egctl member list | grep "APIAddr"
+    APIAddr: localhost:2381
+$ egctl member list | grep "Name"
+    ClusterName: eg-cluster-default-name
+    Name: eg-default-name
 $ egctl member list | grep "id"
     id: 689e371e88f78b6a
 ```
@@ -251,6 +251,13 @@ filters:
 
 The pipeline means it will forward traffic to 3 backend endpoints, using the
 `roundRobin` load balance policy.
+
+Additionally, we provide a [dashboard](https://cloud.megaease.com) that
+streamlines the aforementioned steps, this intuitive tool can help you create,
+manage HTTPServers, Pipelines and other Easegress configuration.
+
+![HTTP Server](doc/imgs/readme-httpserver.png)
+![Pipeline](doc/imgs/readme-pipeline.png)
 
 ### Test
 
@@ -396,7 +403,7 @@ Execute the below command, your slack will receive the article list of the RSS
 feed.
 
 ```bash
-$ curl -H X-Rss-Url:https://hnrss.org/newest?count=5 http://127.0.0.1:10080/rss
+curl -H X-Rss-Url:https://hnrss.org/newest?count=5 http://127.0.0.1:10080/rss
 ```
 
 Please note the maximum message size Slack allowed is about 3K, so you will
