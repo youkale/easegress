@@ -21,20 +21,19 @@ import (
 	"net/http"
 	"os"
 	"sort"
-	"sync"
 	"testing"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 
-	cluster "github.com/megaease/easegress/pkg/cluster"
-	"github.com/megaease/easegress/pkg/cluster/clustertest"
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	cluster "github.com/megaease/easegress/v2/pkg/cluster"
+	"github.com/megaease/easegress/v2/pkg/cluster/clustertest"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,9 +78,8 @@ func TestValidate(t *testing.T) {
 	assert := assert.New(t)
 	clusterInstance, _ := createClusterAndSyncer()
 
-	var mockMap sync.Map
 	supervisor := supervisor.NewMock(
-		nil, clusterInstance, mockMap, mockMap, nil, nil, false, nil, nil)
+		nil, clusterInstance, nil, nil, false, nil, nil)
 
 	const validYaml = `
 name: headerLookup
@@ -191,9 +189,8 @@ headerSetters:
 
 	clusterInstance, syncerChannel := createClusterAndSyncer()
 
-	var mockMap sync.Map
 	supervisor := supervisor.NewMock(
-		nil, clusterInstance, mockMap, mockMap, nil, nil, false, nil, nil)
+		nil, clusterInstance, nil, nil, false, nil, nil)
 
 	// let's put data to 'foobar'
 	foobar := `
@@ -225,6 +222,7 @@ extra-entry: "extra"
 	assert.Equal("123456789", hdr1)
 
 	hl, err = createHeaderLookup(config, hl, supervisor)
+	assert.Nil(err)
 	ctx, header = prepareCtxAndHeader(t)
 
 	// update key-value store
@@ -245,6 +243,7 @@ extra-entry: "extra"
 	assert.Equal("77341", header.Get("user-ext-id"))
 
 	hl, err = createHeaderLookup(config, hl, supervisor)
+	assert.Nil(err)
 	ctx, header = prepareCtxAndHeader(t)
 	header.Set("X-AUTH-USER", "foobar")
 	// delete foobar completely
@@ -274,9 +273,8 @@ headerSetters:
     headerKey: "user-ext-id"
 `
 	clusterInstance, _ := createClusterAndSyncer()
-	var mockMap sync.Map
 	supervisor := supervisor.NewMock(
-		nil, clusterInstance, mockMap, mockMap, nil, nil, false, nil, nil)
+		nil, clusterInstance, nil, nil, false, nil, nil)
 	bobbanana := `
 ext-id: "333"
 extra-entry: "extra"

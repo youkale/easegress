@@ -19,15 +19,14 @@ package proxies
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,9 +61,8 @@ func TestGeneralLoadBalancer(t *testing.T) {
 	lb := NewGeneralLoadBalancer(spec, servers)
 	wg := &sync.WaitGroup{}
 	wg.Add(serverCount)
-	lb.Init(NewHTTPSessionSticker, func(hcs *HealthCheckSpec) HealthChecker {
-		return &MockHealthChecker{expect: int32(serverCount), wg: wg, result: false}
-	}, nil)
+	hc := &MockHealthChecker{Expect: int32(serverCount), WG: wg, Result: false}
+	lb.Init(NewHTTPSessionSticker, hc, nil)
 	wg.Wait()
 	time.Sleep(20 * time.Millisecond)
 	assert.Equal(t, len(lb.healthyServers.Load().Servers), 0)
@@ -75,9 +73,8 @@ func TestGeneralLoadBalancer(t *testing.T) {
 	lb = NewGeneralLoadBalancer(spec, servers)
 
 	wg.Add(serverCount)
-	lb.Init(NewHTTPSessionSticker, func(hcs *HealthCheckSpec) HealthChecker {
-		return &MockHealthChecker{expect: int32(serverCount), wg: wg, result: true}
-	}, nil)
+	hc = &MockHealthChecker{Expect: int32(serverCount), WG: wg, Result: true}
+	lb.Init(NewHTTPSessionSticker, hc, nil)
 	wg.Wait()
 	time.Sleep(20 * time.Millisecond)
 	assert.Equal(t, len(lb.healthyServers.Load().Servers), 10)
@@ -85,21 +82,19 @@ func TestGeneralLoadBalancer(t *testing.T) {
 }
 
 func TestRandomLoadBalancePolicy(t *testing.T) {
-	rand.Seed(0)
-
 	counter := [10]int{}
 	servers := prepareServers(10)
 
 	lb := NewGeneralLoadBalancer(&LoadBalanceSpec{Policy: LoadBalancePolicyRandom}, servers)
 	lb.Init(nil, nil, nil)
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100000; i++ {
 		svr := lb.ChooseServer(nil)
 		counter[svr.Weight-1]++
 	}
 
 	for i := 0; i < 10; i++ {
-		if v := counter[i]; v < 900 || v > 1100 {
+		if v := counter[i]; v < 8000 || v > 12000 {
 			t.Errorf("possibility is not even with value %v", v)
 		}
 	}
@@ -126,15 +121,13 @@ func TestRoundRobinLoadBalancePolicy(t *testing.T) {
 }
 
 func TestWeightedRandomLoadBalancePolicy(t *testing.T) {
-	rand.Seed(0)
-
 	counter := [10]int{}
 	servers := prepareServers(10)
 
 	lb := NewGeneralLoadBalancer(&LoadBalanceSpec{Policy: LoadBalancePolicyWeightedRandom}, servers)
 	lb.Init(nil, nil, nil)
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 50000; i++ {
 		svr := lb.ChooseServer(nil)
 		counter[svr.Weight-1]++
 	}
@@ -142,7 +135,7 @@ func TestWeightedRandomLoadBalancePolicy(t *testing.T) {
 	v := 0
 	for i := 0; i < 10; i++ {
 		if v >= counter[i] {
-			t.Error("possibility is not weighted even")
+			t.Errorf("possibility is not weighted even %v", counter)
 		}
 		v = counter[i]
 	}

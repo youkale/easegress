@@ -22,7 +22,7 @@ on:
       - ".github/workflows/test.yml"
 
 env:
-  GO_VERSION: 1.19
+  GO_VERSION: "1.20"
 
 jobs:
   test:
@@ -46,7 +46,7 @@ jobs:
           make test TEST_FLAGS="-race -coverprofile=coverage.txt -covermode=atomic"
 
       - name: Upload coverage to Codecov 
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3.1.4
         with:
           file: ./coverage.txt
   test-win:

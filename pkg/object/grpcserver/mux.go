@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/megaease/easegress/pkg/protocols/grpcprot"
-	"github.com/megaease/easegress/pkg/util/fasttime"
+	"github.com/megaease/easegress/v2/pkg/protocols/grpcprot"
+	"github.com/megaease/easegress/v2/pkg/util/fasttime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,13 +32,13 @@ import (
 	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/globalfilter"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/tracing"
-	"github.com/megaease/easegress/pkg/util/ipfilter"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/globalfilter"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/tracing"
+	"github.com/megaease/easegress/v2/pkg/util/ipfilter"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 type (
@@ -387,7 +387,7 @@ func (mi *muxInstance) search(request *grpcprot.Request) *route {
 	// The key of the cache is grpc server address + called method
 	// and if a method is cached, we are sure it does not contain any
 	// headers.
-	r := mi.getRouteFromCache(request.Host(), fullMethod)
+	r := mi.getRouteFromCache(request.OnlyHost(), fullMethod)
 	if r != nil {
 		if r.code != 0 {
 			return r
@@ -412,7 +412,7 @@ func (mi *muxInstance) search(request *grpcprot.Request) *route {
 	}
 
 	for _, rs := range mi.rules {
-		if !rs.match(request.Host()) {
+		if !rs.match(request.OnlyHost()) {
 			continue
 		}
 
@@ -431,7 +431,7 @@ func (mi *muxInstance) search(request *grpcprot.Request) *route {
 			// The method can be put into the cache if it has no headers.
 			if len(method.headers) == 0 {
 				r = &route{code: 0, method: method}
-				mi.putRouteToCache(request.Host(), fullMethod, r)
+				mi.putRouteToCache(request.OnlyHost(), fullMethod, r)
 			} else if !method.matchHeaders(request) {
 				headerMismatch = true
 				continue
@@ -459,7 +459,7 @@ func (mi *muxInstance) search(request *grpcprot.Request) *route {
 		code:    codes.NotFound,
 		message: "grpc stream miss match any conditions",
 	}
-	mi.putRouteToCache(request.Host(), fullMethod, notFound)
+	mi.putRouteToCache(request.OnlyHost(), fullMethod, notFound)
 	return notFound
 }
 

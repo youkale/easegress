@@ -23,10 +23,10 @@ import (
 	"sort"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/megaease/easegress/pkg/api"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/meshcontroller/spec"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/meshcontroller/spec"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 	"github.com/megaease/easemesh-api/v2alpha1"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -45,7 +45,7 @@ func (a *API) listCustomResourceKinds(w http.ResponseWriter, r *http.Request) {
 		return kinds[i].Name < kinds[j].Name
 	})
 
-	var pbKinds []*v2alpha1.CustomResourceKind
+	pbKinds := make([]*v2alpha1.CustomResourceKind, 0, len(kinds))
 	for _, v := range kinds {
 		kind := &v2alpha1.CustomResourceKind{}
 		err := a.convertSpecToPB(v, kind)

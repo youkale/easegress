@@ -22,11 +22,12 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 const (
@@ -36,9 +37,17 @@ const (
 	// ObjectKindsPrefix is the object-kinds prefix.
 	ObjectKindsPrefix = "/object-kinds"
 
+	// ObjectTemplatePrefix is the object-template prefix.
+	ObjectTemplatePrefix = "/objects-yaml"
+
 	// StatusObjectPrefix is the prefix of object status.
 	StatusObjectPrefix = "/status/objects"
+
+	// ObjectAPIResourcesPrefix is the prefix of object api resources.
+	ObjectAPIResourcesPrefix = "/object-api-resources"
 )
+
+func RegisterValidateHook() {}
 
 func (s *Server) objectAPIEntries() []*Entry {
 	return []*Entry{
@@ -46,6 +55,11 @@ func (s *Server) objectAPIEntries() []*Entry {
 			Path:    ObjectKindsPrefix,
 			Method:  "GET",
 			Handler: s.listObjectKinds,
+		},
+		{
+			Path:    ObjectAPIResourcesPrefix,
+			Method:  "GET",
+			Handler: s.listObjectAPIResources,
 		},
 		{
 			Path:    ObjectPrefix,
@@ -61,6 +75,11 @@ func (s *Server) objectAPIEntries() []*Entry {
 			Path:    ObjectPrefix + "/{name}",
 			Method:  "GET",
 			Handler: s.getObject,
+		},
+		{
+			Path:    ObjectTemplatePrefix + "/{kind}/{name}",
+			Method:  "GET",
+			Handler: s.getObjectTemplate,
 		},
 		{
 			Path:    ObjectPrefix + "/{name}",
@@ -96,7 +115,7 @@ func (s *Server) readObjectSpec(w http.ResponseWriter, r *http.Request) (*superv
 		return nil, fmt.Errorf("read body failed: %v", err)
 	}
 
-	spec, err := s.super.NewSpec(string(body))
+	spec, err := s.super.CreateSpec(string(body))
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +140,10 @@ func (s *Server) createObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if spec.Categroy() == supervisor.CategorySystemController {
+		HandleAPIError(w, r, http.StatusConflict, fmt.Errorf("can't create system controller object"))
+	}
+
 	name := spec.Name()
 
 	s.Lock()
@@ -130,6 +153,15 @@ func (s *Server) createObject(w http.ResponseWriter, r *http.Request) {
 	if existedSpec != nil {
 		HandleAPIError(w, r, http.StatusConflict, fmt.Errorf("conflict name: %s", name))
 		return
+	}
+
+	// Validate hooks.
+	for _, hook := range objectValidateHooks {
+		err := hook(OperationTypeCreate, spec)
+		if err != nil {
+			HandleAPIError(w, r, http.StatusBadRequest, fmt.Errorf("validate failed: %v", err))
+			return
+		}
 	}
 
 	s._putObject(spec)
@@ -147,9 +179,24 @@ func (s *Server) deleteObject(w http.ResponseWriter, r *http.Request) {
 	defer s.Unlock()
 
 	spec := s._getObject(name)
+
+	if spec.Categroy() == supervisor.CategorySystemController {
+		HandleAPIError(w, r, http.StatusBadRequest, fmt.Errorf("can't delete system controller object"))
+		return
+	}
+
 	if spec == nil {
 		HandleAPIError(w, r, http.StatusNotFound, fmt.Errorf("not found"))
 		return
+	}
+
+	// Validate hooks.
+	for _, hook := range objectValidateHooks {
+		err := hook(OperationTypeDelete, spec)
+		if err != nil {
+			HandleAPIError(w, r, http.StatusBadRequest, fmt.Errorf("validate failed: %v", err))
+			return
+		}
 	}
 
 	s._deleteObject(name)
@@ -164,11 +211,61 @@ func (s *Server) deleteObjects(w http.ResponseWriter, r *http.Request) {
 
 		specs := s._listObjects()
 		for _, spec := range specs {
+			if spec.Categroy() == supervisor.CategorySystemController {
+				continue
+			}
+
+			// Validate hooks.
+			for _, hook := range objectValidateHooks {
+				err := hook(OperationTypeDelete, spec)
+				if err != nil {
+					HandleAPIError(w, r, http.StatusBadRequest, fmt.Errorf("validate failed: %v", err))
+					return
+				}
+			}
+
 			s._deleteObject(spec.Name())
 		}
 
 		s.upgradeConfigVersion(w, r)
 	}
+}
+
+// getObjectTemplate returns the template of the object in yaml format.
+// The body is in yaml format to keep the order of fields.
+func (s *Server) getObjectTemplate(w http.ResponseWriter, r *http.Request) {
+	kind := chi.URLParam(r, "kind")
+	name := chi.URLParam(r, "name")
+
+	allKinds := supervisor.ObjectKinds()
+	for _, k := range allKinds {
+		if strings.EqualFold(k, kind) {
+			kind = k
+		}
+	}
+
+	obj := supervisor.GetObject(kind)
+	if obj == nil {
+		HandleAPIError(w, r, http.StatusNotFound, fmt.Errorf("not found"))
+		return
+	}
+
+	specByte, err := codectool.MarshalYAML(obj.DefaultSpec())
+	if err != nil {
+		HandleAPIError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	metaByte, err := codectool.MarshalYAML(supervisor.NewMeta(kind, name))
+	if err != nil {
+		HandleAPIError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	spec := fmt.Sprintf("%s\n%s", metaByte, specByte)
+
+	w.Header().Set("Content-Type", "text/x-yaml")
+	w.Write([]byte(spec))
 }
 
 func (s *Server) getObject(w http.ResponseWriter, r *http.Request) {
@@ -208,6 +305,15 @@ func (s *Server) updateObject(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf("different kinds: %s, %s",
 				existedSpec.Kind(), spec.Kind()))
 		return
+	}
+
+	// Validate hooks.
+	for _, hook := range objectValidateHooks {
+		err := hook(OperationTypeUpdate, spec)
+		if err != nil {
+			HandleAPIError(w, r, http.StatusBadRequest, fmt.Errorf("validate failed: %v", err))
+			return
+		}
 	}
 
 	s._putObject(spec)
@@ -275,4 +381,9 @@ func (s *Server) listObjectKinds(w http.ResponseWriter, r *http.Request) {
 	kinds := supervisor.ObjectKinds()
 
 	WriteBody(w, r, kinds)
+}
+
+func (s *Server) listObjectAPIResources(w http.ResponseWriter, r *http.Request) {
+	res := ObjectAPIResources()
+	WriteBody(w, r, res)
 }

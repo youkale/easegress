@@ -24,8 +24,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 
-	"github.com/megaease/easegress/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/logger"
 )
 
 type (
@@ -80,6 +81,16 @@ func (m *dynamicMux) reloadAPIs() {
 	router.Use(m.newAPILogger)
 	router.Use(m.newConfigVersionAttacher)
 	router.Use(m.newRecoverer)
+	if len(m.server.opt.BasicAuth) > 0 {
+		router.Use(m.basicAuth("easegress-basic-auth", m.server.opt.BasicAuth))
+	}
+
+	// For access from browser.
+	cors := cors.New(cors.Options{
+		// By default, not allow delete method.
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"},
+	})
+	router.Use(cors.Handler)
 
 	for _, apiGroup := range apiGroups {
 		for _, api := range apiGroup.Entries {

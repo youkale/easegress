@@ -23,8 +23,8 @@ import (
 
 	"github.com/megaease/grace/gracenet"
 
-	"github.com/megaease/easegress/pkg/common"
-	"github.com/megaease/easegress/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/common"
+	"github.com/megaease/easegress/v2/pkg/logger"
 )
 
 var (
@@ -71,7 +71,6 @@ func NotifySigUsr2(closeCls func(), restartCls func()) error {
 			// Reset signal usr2 notify
 			NotifySigUsr2(closeCls, restartCls)
 		} else {
-			childdone := make(chan error, 1)
 			go func() {
 				process, err := os.FindProcess(pid)
 				if err != nil {
@@ -79,13 +78,9 @@ func NotifySigUsr2(closeCls func(), restartCls func()) error {
 					NotifySigUsr2(closeCls, restartCls)
 				} else {
 					_, werr := process.Wait()
-					childdone <- werr
-					select {
-					case err := <-childdone:
-						logger.Errorf("child proc exited: %v", err)
-						restartCls()
-						NotifySigUsr2(closeCls, restartCls)
-					}
+					logger.Errorf("child proc exited: %v", werr)
+					restartCls()
+					NotifySigUsr2(closeCls, restartCls)
 				}
 			}()
 		}

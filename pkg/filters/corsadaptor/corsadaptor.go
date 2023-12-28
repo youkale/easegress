@@ -24,9 +24,9 @@ import (
 
 	"github.com/rs/cors"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
 )
 
 const (
@@ -64,12 +64,12 @@ type (
 	Spec struct {
 		filters.BaseSpec `json:",inline"`
 
-		AllowedOrigins   []string `json:"allowedOrigins" jsonschema:"omitempty"`
-		AllowedMethods   []string `json:"allowedMethods" jsonschema:"omitempty,uniqueItems=true,format=httpmethod-array"`
-		AllowedHeaders   []string `json:"allowedHeaders" jsonschema:"omitempty"`
-		AllowCredentials bool     `json:"allowCredentials" jsonschema:"omitempty"`
-		ExposedHeaders   []string `json:"exposedHeaders" jsonschema:"omitempty"`
-		MaxAge           int      `json:"maxAge" jsonschema:"omitempty"`
+		AllowedOrigins   []string `json:"allowedOrigins,omitempty"`
+		AllowedMethods   []string `json:"allowedMethods,omitempty" jsonschema:"uniqueItems=true,format=httpmethod-array"`
+		AllowedHeaders   []string `json:"allowedHeaders,omitempty"`
+		AllowCredentials bool     `json:"allowCredentials,omitempty"`
+		ExposedHeaders   []string `json:"exposedHeaders,omitempty"`
+		MaxAge           int      `json:"maxAge,omitempty"`
 	}
 )
 
@@ -94,7 +94,7 @@ func (a *CORSAdaptor) Init() {
 }
 
 // Inherit inherits previous generation of CORSAdaptor.
-func (a *CORSAdaptor) Inherit(previousGeneration filters.Filter) {
+func (a *CORSAdaptor) Inherit(_ filters.Filter) {
 	a.Init()
 }
 

@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/megaease/easegress/pkg/protocols"
-	"github.com/megaease/easegress/pkg/util/readers"
+	"github.com/megaease/easegress/v2/pkg/protocols"
+	"github.com/megaease/easegress/v2/pkg/util/readers"
 )
 
 // Response wraps http.Response.
@@ -40,9 +40,8 @@ type Response struct {
 	// TODO: we only need StatusCode, Header and Body, that's can avoid
 	// using the big http.Response object.
 	*http.Response
-	stream      *readers.ByteCountReader
-	payload     []byte
-	payloadSize int64
+	stream  *readers.ByteCountReader
+	payload []byte
 }
 
 // ErrResponseEntityTooLarge means the request entity is too large.
@@ -336,9 +335,9 @@ func (r *builderResponse) YAMLBody() (interface{}, error) {
 
 // responseInfo stores the information of a response.
 type responseInfo struct {
-	StatusCode int                 `json:"statusCode" jsonschema:"omitempty"`
-	Headers    map[string][]string `json:"headers" jsonschema:"omitempty"`
-	Body       string              `json:"body" jsonschema:"omitempty"`
+	StatusCode int                 `json:"statusCode,omitempty"`
+	Headers    map[string][]string `json:"headers,omitempty"`
+	Body       string              `json:"body,omitempty"`
 }
 
 // NewResponseInfo returns a new responseInfo.

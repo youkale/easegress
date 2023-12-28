@@ -23,10 +23,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 const (
@@ -82,9 +82,9 @@ type (
 		filters.BaseSpec `json:",inline"`
 
 		Match       string `json:"match" jsonschema:"required"`
-		MatchPart   string `json:"matchPart,omitempty" jsonschema:"omitempty,enum=uri,enum=path,enum=full"` // default uri
+		MatchPart   string `json:"matchPart,omitempty" jsonschema:"enum=uri,enum=path,enum=full"` // default uri
 		Replacement string `json:"replacement" jsonschema:"required"`
-		StatusCode  int    `json:"statusCode,omitempty" jsonschema:"omitempty"` // default 301
+		StatusCode  int    `json:"statusCode,omitempty"` // default 301
 	}
 )
 

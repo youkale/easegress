@@ -31,15 +31,15 @@ import (
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/graceupdate"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot/httpstat"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/easemonitor"
-	"github.com/megaease/easegress/pkg/util/filterwriter"
-	"github.com/megaease/easegress/pkg/util/limitlistener"
-	"github.com/megaease/easegress/pkg/util/prometheushelper"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/graceupdate"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot/httpstat"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/easemonitor"
+	"github.com/megaease/easegress/v2/pkg/util/filterwriter"
+	"github.com/megaease/easegress/v2/pkg/util/limitlistener"
+	"github.com/megaease/easegress/v2/pkg/util/prometheushelper"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -268,7 +268,7 @@ func (r *runtime) startHTTP3Server() {
 	}
 
 	r.server3 = &http3.Server{
-		Addr:      fmt.Sprintf(":%d", r.spec.Port),
+		Addr:      fmt.Sprintf("%s:%d", r.spec.Address, r.spec.Port),
 		Handler:   r.mux,
 		TLSConfig: tlsConfig,
 		QuicConfig: &quic.Config{
@@ -303,15 +303,16 @@ func (r *runtime) startHTTP1And2Server() {
 		return !bytes.Contains(p, []byte("TLS handshake error"))
 	})
 	r.server = &http.Server{
-		Addr:        fmt.Sprintf(":%d", r.spec.Port),
+		Addr:        fmt.Sprintf("%s:%d", r.spec.Address, r.spec.Port),
 		Handler:     r.mux,
 		IdleTimeout: keepAliveTimeout,
 		ErrorLog:    log.New(fw, "", log.LstdFlags),
 	}
 	r.server.SetKeepAlivesEnabled(r.spec.KeepAlive)
 
-	listener, err := gnet.Listen("tcp", fmt.Sprintf(":%d", r.spec.Port))
+	listener, err := gnet.Listen("tcp", fmt.Sprintf("%s:%d", r.spec.Address, r.spec.Port))
 	if err != nil {
+		logger.Errorf("httpserver %s failed to listen: %v", r.superSpec.Name(), err)
 		r.setState(stateFailed)
 		r.setError(err)
 		return
@@ -386,6 +387,7 @@ func (r *runtime) handleEventServeFailed(e *eventServeFailed) {
 	if r.roundNum > e.roundNum {
 		return
 	}
+	logger.Errorf("httpserver %v failed: %v", r.superSpec.Name(), e.err)
 	r.setState(stateFailed)
 	r.setError(e.err)
 }
@@ -470,8 +472,10 @@ func (r *runtime) newMetrics(name string) *metrics {
 		"clusterRole":    r.superSpec.Super().Options().ClusterRole,
 		"instanceName":   r.superSpec.Super().Options().Name,
 	}
-	httpserverLabels := []string{"clusterName", "clusterRole",
-		"instanceName", "httpServerName", "kind", "routerKind", "backend"}
+	httpserverLabels := []string{
+		"clusterName", "clusterRole",
+		"instanceName", "httpServerName", "kind", "routerKind", "backend",
+	}
 	return &metrics{
 		Health: prometheushelper.NewGauge(
 			"httpserver_health",

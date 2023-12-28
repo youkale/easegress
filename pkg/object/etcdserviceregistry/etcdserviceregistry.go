@@ -22,13 +22,15 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/serviceregistry"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/serviceregistry"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
@@ -43,8 +45,16 @@ const (
 	requestTimeout = 5 * time.Second
 )
 
+var aliases = []string{"etcd"}
+
 func init() {
 	supervisor.Register(&EtcdServiceRegistry{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  aliases,
+	})
 }
 
 type (

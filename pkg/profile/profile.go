@@ -26,8 +26,8 @@ import (
 	"runtime/pprof"
 	"sync"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/option"
 )
 
 // Profile is the Profile interface.
@@ -49,8 +49,9 @@ type Profile interface {
 }
 
 type profile struct {
-	cpuFile     *os.File
 	opt         *option.Options
+	cpuFile     *os.File
+	cpuFileName string
 	memFileName string
 
 	mutex sync.Mutex
@@ -72,7 +73,7 @@ func New(opt *option.Options) (Profile, error) {
 
 func (p *profile) CPUFileName() string {
 	if p.cpuFile == nil {
-		return ""
+		return p.cpuFileName
 	}
 	return p.cpuFile.Name()
 }
@@ -103,6 +104,7 @@ func (p *profile) StartCPUProfile(filepath string) error {
 	}
 
 	p.cpuFile = f
+	p.cpuFileName = f.Name()
 
 	logger.Infof("cpu profile: %s", filepath)
 

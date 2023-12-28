@@ -23,10 +23,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/resilience"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/resilience"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,7 +92,7 @@ compression:
 	ctx = getCtx(stdr)
 	assert.Equal("", proxy.Handle(ctx))
 	fmt.Println(ctx.GetOutputResponse().(*httpprot.Response).Status)
-	bodyBytes, err = io.ReadAll(ctx.GetOutputResponse().(*httpprot.Response).Body)
+	_, err = io.ReadAll(ctx.GetOutputResponse().(*httpprot.Response).Body)
 	// assert headers contains compression
 	header := ctx.GetOutputResponse().(*httpprot.Response).Header()
 	encoding := header.Get("Content-Encoding")
@@ -113,7 +113,7 @@ maxBodySize: 1024
 	ctx = getCtx(stdr)
 	assert.Equal("", proxy.Handle(ctx))
 	fmt.Println(ctx.GetOutputResponse().(*httpprot.Response).Status)
-	bodyBytes, err = io.ReadAll(ctx.GetOutputResponse().(*httpprot.Response).Body)
+	_, err = io.ReadAll(ctx.GetOutputResponse().(*httpprot.Response).Body)
 	if err != nil {
 		fmt.Println(err)
 		assert.Fail("read body error")

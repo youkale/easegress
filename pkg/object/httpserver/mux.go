@@ -29,22 +29,22 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/megaease/easegress/pkg/object/httpserver/routers"
+	"github.com/megaease/easegress/v2/pkg/object/httpserver/routers"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/megaease/easegress/pkg/object/globalfilter"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/object/globalfilter"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/autocertmanager"
-	"github.com/megaease/easegress/pkg/protocols/httpprot/httpstat"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/tracing"
-	"github.com/megaease/easegress/pkg/util/fasttime"
-	"github.com/megaease/easegress/pkg/util/ipfilter"
-	"github.com/megaease/easegress/pkg/util/readers"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/autocertmanager"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot/httpstat"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/tracing"
+	"github.com/megaease/easegress/v2/pkg/util/fasttime"
+	"github.com/megaease/easegress/v2/pkg/util/ipfilter"
+	"github.com/megaease/easegress/v2/pkg/util/readers"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -129,7 +129,8 @@ func (mi *muxInstance) putRouteToCache(req *httpprot.Request, rc *cachedRoute) {
 }
 
 func newMux(httpStat *httpstat.HTTPStat, topN *httpstat.TopN,
-	metrics *metrics, mapper context.MuxMapper) *mux {
+	metrics *metrics, mapper context.MuxMapper,
+) *mux {
 	m := &mux{
 		httpStat: httpStat,
 		topN:     topN,
@@ -203,8 +204,16 @@ func (m *mux) ServeHTTP(stdw http.ResponseWriter, stdr *http.Request) {
 	// don't know which HTTP server listen on this port (consider there's an
 	// nginx sitting in front of Easegress), so all HTTP servers need to
 	// handle HTTP-01 challenges.
+
 	if strings.HasPrefix(stdr.URL.Path, "/.well-known/acme-challenge/") {
-		autocertmanager.HandleHTTP01Challenge(stdw, stdr)
+		acm, exists := autocertmanager.GetGlobalAutoCertManager()
+		if !exists {
+			logger.Errorf("there is no one AutoCertManager")
+			stdw.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+
+		acm.HandleHTTP01Challenge(stdw, stdr)
 		return
 	}
 
@@ -267,6 +276,8 @@ func (mi *muxInstance) serveHTTP(stdw http.ResponseWriter, stdr *http.Request) {
 
 	routeCtx := routers.NewContext(req)
 	route := mi.search(routeCtx)
+	ctx.SetRoute(route.route)
+
 	var respHeader http.Header
 
 	defer func() {

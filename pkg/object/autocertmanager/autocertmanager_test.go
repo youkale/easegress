@@ -20,8 +20,8 @@ package autocertmanager
 import (
 	"context"
 	"crypto"
-	"crypto/dsa"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -43,11 +42,11 @@ import (
 	"time"
 
 	"github.com/libdns/libdns"
-	cluster "github.com/megaease/easegress/pkg/cluster"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/option"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	cluster "github.com/megaease/easegress/v2/pkg/cluster"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 	"golang.org/x/crypto/acme"
 )
 
@@ -543,7 +542,7 @@ domains:
       name: customDNS
       zone: megaease.com
 directoryURL: ` + url
-	etcdDirName, err := ioutil.TempDir("", "autocertmanager-test")
+	etcdDirName, err := os.MkdirTemp("", "autocertmanager-test")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -561,39 +560,39 @@ directoryURL: ` + url
 	acmWg.Wait()
 	time.Sleep(1 * time.Second)
 
-	if _, err := GetCertificate(helloInfo(""), false); err == nil {
+	if _, err := acm.GetCertificate(helloInfo(""), false); err == nil {
 		t.Errorf("GetCertificate should fail")
 	}
-	if _, err := GetCertificate(helloInfo("."), false); err == nil {
+	if _, err := acm.GetCertificate(helloInfo("."), false); err == nil {
 		t.Errorf("GetCertificate should fail")
 	}
 	hello := helloInfo("example.org")
 	hello.SupportedProtos = []string{acme.ALPNProto}
-	if _, err := GetCertificate(hello, false); err == nil {
+	if _, err := acm.GetCertificate(hello, false); err == nil {
 		t.Errorf("GetCertificate should fail")
 	}
 
 	hello = helloInfo(".megaease.com")
 	hello.SupportedProtos = []string{acme.ALPNProto}
-	if _, err := GetCertificate(hello, false); err == nil {
+	if _, err := acm.GetCertificate(hello, false); err == nil {
 		t.Errorf("GetCertificate should fail")
 	}
 	acm.spec.EnableTLSALPN01 = false
-	if _, err := GetCertificate(hello, false); err == nil {
+	if _, err := acm.GetCertificate(hello, false); err == nil {
 		t.Errorf("GetCertificate should fail")
 	}
 	acm.spec.EnableTLSALPN01 = true
 
 	hello.SupportedProtos = []string{"proto"}
-	if _, err := GetCertificate(hello, false); err != nil {
+	if _, err := acm.GetCertificate(hello, false); err != nil {
 		t.Errorf("GetCertificate failed; %v", err.Error())
 	}
-	if _, err := GetCertificate(hello, true); err == nil {
+	if _, err := acm.GetCertificate(hello, true); err == nil {
 		t.Errorf("GetCertificate should fail")
 	}
 	hello = helloInfo("unexistingdomain.io")
 	hello.SupportedProtos = []string{"proto"}
-	if _, err := GetCertificate(hello, false); err != nil {
+	if _, err := acm.GetCertificate(hello, false); err != nil {
 		t.Errorf("GetCertificate failed; %v", err.Error())
 	}
 
@@ -603,20 +602,20 @@ directoryURL: ` + url
 		t.Errorf(err.Error())
 	}
 	acm.spec.EnableHTTP01 = false
-	HandleHTTP01Challenge(w, r)
+	acm.HandleHTTP01Challenge(w, r)
 	if !strings.Contains(w.Body.String(), "HTTP01 challenge is disabled") {
 		t.Error("should be disabled")
 	}
 	acm.spec.EnableHTTP01 = true
 	w = httptest.NewRecorder()
-	HandleHTTP01Challenge(w, r)
+	acm.HandleHTTP01Challenge(w, r)
 	if !strings.Contains(w.Body.String(), `host "example.org" is not configured`) {
 		t.Error("host should not exist")
 	}
 	// fake host
 	r.Host = "*.megaease.com"
 	w = httptest.NewRecorder()
-	HandleHTTP01Challenge(w, r)
+	acm.HandleHTTP01Challenge(w, r)
 	if !strings.Contains(w.Body.String(), `token does not exist`) {
 		t.Error("token should not exist")
 	}
@@ -629,7 +628,7 @@ directoryURL: ` + url
 	}
 
 	w = httptest.NewRecorder()
-	HandleHTTP01Challenge(w, r)
+	acm.HandleHTTP01Challenge(w, r)
 	if !strings.Contains(w.Body.String(), token) {
 		t.Error("token should exist")
 	}
@@ -677,7 +676,7 @@ domains:
       name: customDNS
       zone: megaease.com
 directoryURL: ` + url
-	etcdDirName, err := ioutil.TempDir("", "autocertmanager-test")
+	etcdDirName, err := os.MkdirTemp("", "autocertmanager-test")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -725,7 +724,7 @@ domains:
       name: customDNS
       zone: megaease.com
 directoryURL: ` + url
-	etcdDirName, err := ioutil.TempDir("", "autocertmanager-test")
+	etcdDirName, err := os.MkdirTemp("", "autocertmanager-test")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -752,22 +751,6 @@ directoryURL: ` + url
 	closeWG.Wait()
 }
 
-func TestAutoCertManagerNotRunning(t *testing.T) {
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		HandleHTTP01Challenge(w, r)
-		wg.Done()
-	}))
-	defer ts.Close()
-	_, err := http.Get(ts.URL)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	wg.Wait()
-	GetCertificate(helloInfo("example.org"), false)
-}
-
 func TestCertificateHelpers(t *testing.T) {
 	keys := make([]crypto.PrivateKey, 4)
 	success := []bool{true, true, false, true}
@@ -776,9 +759,8 @@ func TestCertificateHelpers(t *testing.T) {
 	keys[0] = rsaKey
 	ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	keys[1] = ecdsaKey
-	dsaKey := &dsa.PrivateKey{}
-	_ = dsa.GenerateKey(dsaKey, rand.Reader)
-	keys[2] = dsaKey
+	_, edKey, _ := ed25519.GenerateKey(rand.Reader)
+	keys[2] = edKey
 	rsaKey2, _ := rsa.GenerateKey(rand.Reader, 2048)
 	rsaKey2.D = nil
 	keys[3] = rsaKey2
@@ -835,7 +817,7 @@ func waitDNSRecordTest(t *testing.T, d Domain) {
 }
 
 func TestDomain(t *testing.T) {
-	etcdDirName, err := ioutil.TempDir("", "autocertmanager-domain-test")
+	etcdDirName, err := os.MkdirTemp("", "autocertmanager-domain-test")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -856,8 +838,7 @@ func TestDomain(t *testing.T) {
 	})
 
 	t.Run("renewCert", func(t *testing.T) {
-		var ca *httptest.Server
-		ca = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ca := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Replay-Nonce", "nonce")
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte("{}"))

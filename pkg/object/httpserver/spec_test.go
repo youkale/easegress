@@ -20,11 +20,14 @@ package httpserver
 import (
 	"crypto/tls"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/cluster"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +51,7 @@ rules:
     - pathPrefix: /api
 `
 
-	superSpec, err := supervisor.NewSpec(yamlConfig)
+	_, err := supervisor.NewSpec(yamlConfig)
 	assert.Error(err)
 
 	yamlConfig = `
@@ -62,7 +65,7 @@ rules:
     - pathPrefix: /api
 `
 
-	superSpec, err = supervisor.NewSpec(yamlConfig)
+	_, err = supervisor.NewSpec(yamlConfig)
 	assert.Error(err)
 
 	yamlConfig = `
@@ -75,7 +78,7 @@ rules:
     - pathPrefix: /api
 `
 
-	superSpec, err = supervisor.NewSpec(yamlConfig)
+	superSpec, err := supervisor.NewSpec(yamlConfig)
 	assert.NoError(err)
 	assert.NotNil(superSpec.ObjectSpec())
 
@@ -108,6 +111,16 @@ rules:
 }
 
 func TestTlsConfig(t *testing.T) {
+	// NOTE: For loading system controller AutoCertManager.
+	etcdDirName, err := os.MkdirTemp("", "autocertmanager-test")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	defer os.RemoveAll(etcdDirName)
+
+	cls := cluster.CreateClusterForTest(etcdDirName)
+	supervisor.MustNew(&option.Options{}, cls)
+
 	assert := assert.New(t)
 
 	type TLSConfigTestCase struct {
@@ -241,10 +254,6 @@ rules: []`, validSpec: true, mTLSExpected: true,
 			if testcase.mTLSExpected {
 				assert.Equal(tlsConf.ClientAuth, tls.RequireAndVerifyClientCert)
 			}
-
-			cert, err := tlsConf.GetCertificate(nil)
-			assert.Nil(cert)
-			assert.NoError(err)
 		})
 	}
 }

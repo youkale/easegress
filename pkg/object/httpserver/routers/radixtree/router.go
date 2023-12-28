@@ -26,8 +26,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/megaease/easegress/pkg/object/httpserver/routers"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/object/httpserver/routers"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 // radixtree-router implementation below is a based on the original work by
@@ -485,6 +485,10 @@ func (mp *muxPath) initRewrite() {
 	mp.rewriteTemplate = template.Must(template.New("").Parse(repl))
 }
 
+func (mp *muxPath) Protocol() string {
+	return "http"
+}
+
 func (mp *muxPath) Rewrite(context *routers.RouteContext) {
 	req := context.Request
 
@@ -514,11 +518,7 @@ func newMuxRule(rule *routers.Rule) *muxRule {
 
 		if seg.nodeType == ntStatic {
 			p := path.Path
-			if _, ok := mr.pathCache[p]; ok {
-				mr.pathCache[p] = append(mr.pathCache[p], newMuxPath(path))
-			} else {
-				mr.pathCache[p] = []*muxPath{newMuxPath(path)}
-			}
+			mr.pathCache[p] = append(mr.pathCache[p], newMuxPath(path))
 		} else {
 			mr.root.insert(path)
 		}

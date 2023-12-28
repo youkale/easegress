@@ -26,10 +26,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	v2alpha1 "github.com/megaease/easemesh-api/v2alpha1"
 
-	"github.com/megaease/easegress/pkg/api"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/meshcontroller/spec"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/meshcontroller/spec"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 type ingressesByOrder []*spec.Ingress
@@ -51,7 +51,7 @@ func (a *API) listIngresses(w http.ResponseWriter, r *http.Request) {
 	specs := a.service.ListIngressSpecs()
 
 	sort.Sort(ingressesByOrder(specs))
-	var apiSpecs []*v2alpha1.Ingress
+	apiSpecs := make([]*v2alpha1.Ingress, 0, len(specs))
 	for _, v := range specs {
 		ingress := &v2alpha1.Ingress{}
 		err := a.convertSpecToPB(v, ingress)

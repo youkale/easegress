@@ -19,15 +19,17 @@ package statussynccontroller
 
 import (
 	"runtime/debug"
+	"strings"
 	"sync"
 
-	"github.com/megaease/easegress/pkg/cluster"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
-	"github.com/megaease/easegress/pkg/util/timetool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/cluster"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/util/timetool"
 
-	"github.com/megaease/easegress/pkg/object/trafficcontroller"
+	"github.com/megaease/easegress/v2/pkg/object/trafficcontroller"
 )
 
 const (
@@ -123,6 +125,12 @@ func (s *statusUnit) marshal() ([]byte, error) {
 
 func init() {
 	supervisor.Register(&StatusSyncController{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  []string{"statussynccontroller", "ssc"},
+	})
 }
 
 // Category returns the category of StatusSyncController.

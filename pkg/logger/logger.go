@@ -30,13 +30,22 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/megaease/easegress/pkg/common"
-	"github.com/megaease/easegress/pkg/option"
-	"github.com/megaease/easegress/pkg/util/fasttime"
+	"github.com/megaease/easegress/v2/pkg/common"
+	"github.com/megaease/easegress/v2/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/util/fasttime"
 )
+
+func init() {
+	globalLogLevel = zap.NewAtomicLevel()
+	globalLogLevel.SetLevel(zap.InfoLevel)
+}
 
 // Init initializes logger.
 func Init(opt *option.Options) {
+	if opt.Debug {
+		globalLogLevel.SetLevel(zap.DebugLevel)
+	}
+
 	initDefault(opt)
 	initHTTPFilter(opt)
 	initRestAPI(opt)
@@ -92,21 +101,31 @@ var (
 	httpFilterAccessLogger *zap.SugaredLogger
 	httpFilterDumpLogger   *zap.SugaredLogger
 	restAPILogger          *zap.SugaredLogger
+	globalLogLevel         zap.AtomicLevel
+
+	stdoutLogPath string
 )
+
+// SetLogLevel sets log level. Only support debug and info.
+func SetLogLevel(level zapcore.Level) {
+	globalLogLevel.SetLevel(level)
+}
+
+func GetLogLevel() string {
+	return globalLogLevel.String()
+}
+
+// GetLogPath returns the path of stdout log.
+func GetLogPath() string {
+	return stdoutLogPath
+}
 
 // EtcdClientLoggerConfig generates the config of etcd client logger.
 func EtcdClientLoggerConfig(opt *option.Options, filename string) *zap.Config {
 	encoderConfig := defaultEncoderConfig()
 
-	level := zap.NewAtomicLevel()
-	if opt.Debug {
-		level.SetLevel(zapcore.DebugLevel)
-	} else {
-		level.SetLevel(zapcore.InfoLevel)
-	}
-
 	cfg := &zap.Config{
-		Level:            level,
+		Level:            globalLogLevel,
 		Encoding:         "console",
 		EncoderConfig:    encoderConfig,
 		OutputPaths:      []string{"stdout"},
@@ -142,11 +161,6 @@ func defaultEncoderConfig() zapcore.EncoderConfig {
 func initDefault(opt *option.Options) {
 	encoderConfig := defaultEncoderConfig()
 
-	lowestLevel := zap.InfoLevel
-	if opt.Debug {
-		lowestLevel = zap.DebugLevel
-	}
-
 	var err error
 	var gressLF io.Writer = os.Stdout
 	if opt.AbsLogDir != "" {
@@ -154,16 +168,17 @@ func initDefault(opt *option.Options) {
 		if err != nil {
 			common.Exit(1, err.Error())
 		}
+		stdoutLogPath = gressLF.(*logFile).filename
 	}
 
 	opts := []zap.Option{zap.AddCaller(), zap.AddCallerSkip(1)}
 
 	stderrSyncer := zapcore.AddSync(os.Stderr)
-	stderrCore := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), stderrSyncer, lowestLevel)
+	stderrCore := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), stderrSyncer, globalLogLevel)
 	stderrLogger = zap.New(stderrCore, opts...).Sugar()
 
 	gressSyncer := zapcore.AddSync(gressLF)
-	gressCore := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), gressSyncer, lowestLevel)
+	gressCore := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), gressSyncer, globalLogLevel)
 	gressLogger = zap.New(gressCore, opts...).Sugar()
 
 	defaultCore := gressCore

@@ -20,8 +20,8 @@ package proxies
 import (
 	"testing"
 
-	"github.com/megaease/easegress/pkg/object/serviceregistry"
-	"github.com/megaease/easegress/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/object/serviceregistry"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,7 +53,7 @@ type MockServerPoolImpl struct {
 
 func (m *MockServerPoolImpl) CreateLoadBalancer(spec *LoadBalanceSpec, servers []*Server) LoadBalancer {
 	lb := NewGeneralLoadBalancer(spec, servers)
-	lb.Init(NewHTTPSessionSticker, NewHTTPHealthChecker, nil)
+	lb.Init(NewHTTPSessionSticker, nil, nil)
 	return lb
 }
 

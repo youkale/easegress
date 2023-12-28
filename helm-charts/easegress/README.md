@@ -42,7 +42,7 @@ helm install easegress -n easegress ./helm-charts/easegress \
 Add filters and objects to Easegress:
 
 ```shell
-egctl --server {NODE_IP}:31255 object create -f pipeline.yaml
+egctl --server {NODE_IP}:31255 create object -f pipeline.yaml
 ```
 where NODE_IP is the IP address a node running Easegress pod and `pipeline.yaml` Easegress object definition.
 
@@ -66,6 +66,7 @@ The following table lists the configurable parameters of the MegaEase Easegress 
 | service.adminPort | int | `31255` | nodePort for egctl access. |
 | cluster.primaryReplicas | int | `1` | number of easegress service that persists cluster data to disk |
 | cluster.volumeType | string | `emptyDir` | `emptyDir`: use pods internal filesystem that is not persisted when pod crashes. Use `emptyDir` only when primaryReplicas is 1. | `persistentVolume`, create as many persistenVolumes and persistentVolumeClaims as there are nodeHostnames.
+| cluster.volumeLocalPath | string | `/opt/easegress` | local path of persistenVolume on nodes |
 | cluster.nodeHostnames | list | `[]` | nodeHostnames are hostnames of VMs/Kubernetes nodes. Only used when `volumeType: persistentVolume`. Note that this require nodes to be static. |
 | secondaryReplicas | int | `0` | number of easegress service that not persists cluster data to disk. |
 | log.path | string | `/opt/easegress/log` | log path inside container |

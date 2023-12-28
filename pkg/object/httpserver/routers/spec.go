@@ -22,10 +22,11 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/util/ipfilter"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/util/ipfilter"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 // Rules represents the set of rules.
@@ -33,6 +34,15 @@ type Rules []*Rule
 
 // Paths represents the set of paths.
 type Paths []*Path
+
+// Host defines the host match rule.
+type Host struct {
+	IsRegexp bool   `json:"isRegexp,omitempty"`
+	Value    string `json:"value" jsonschema:"required"`
+	prefix   string `json:"-"`
+	suffix   string `json:"-"`
+	re       *regexp.Regexp
+}
 
 // Rule is first level entry of router.
 type Rule struct {
@@ -43,29 +53,29 @@ type Rule struct {
 	// Reference: https://github.com/alecthomas/jsonschema/issues/30
 	// In the future if we have the scenario where we need marshal the field, but omitempty
 	// in the schema, we are suppose to support multiple types on our own.
-	IPFilterSpec *ipfilter.Spec `json:"ipFilter,omitempty" jsonschema:"omitempty"`
-	Host         string         `json:"host" jsonschema:"omitempty"`
-	HostRegexp   string         `json:"hostRegexp" jsonschema:"omitempty,format=regexp"`
-	Paths        Paths          `json:"paths" jsonschema:"omitempty"`
+	IPFilterSpec *ipfilter.Spec `json:"ipFilter,omitempty"`
+	Host         string         `json:"host,omitempty"`
+	HostRegexp   string         `json:"hostRegexp,omitempty" jsonschema:"format=regexp"`
+	Hosts        []Host         `json:"hosts,omitempty"`
+	Paths        Paths          `json:"paths,omitempty"`
 
 	ipFilter *ipfilter.IPFilter
-	hostRE   *regexp.Regexp
 }
 
 // Path is second level entry of router.
 type Path struct {
-	IPFilterSpec      *ipfilter.Spec `json:"ipFilter,omitempty" jsonschema:"omitempty"`
-	Path              string         `json:"path,omitempty" jsonschema:"omitempty,pattern=^/"`
-	PathPrefix        string         `json:"pathPrefix,omitempty" jsonschema:"omitempty,pattern=^/"`
-	PathRegexp        string         `json:"pathRegexp,omitempty" jsonschema:"omitempty,format=regexp"`
-	RewriteTarget     string         `json:"rewriteTarget" jsonschema:"omitempty"`
-	Methods           []string       `json:"methods,omitempty" jsonschema:"omitempty,uniqueItems=true,format=httpmethod-array"`
+	IPFilterSpec      *ipfilter.Spec `json:"ipFilter,omitempty"`
+	Path              string         `json:"path,omitempty" jsonschema:"pattern=^/"`
+	PathPrefix        string         `json:"pathPrefix,omitempty" jsonschema:"pattern=^/"`
+	PathRegexp        string         `json:"pathRegexp,omitempty" jsonschema:"format=regexp"`
+	RewriteTarget     string         `json:"rewriteTarget,omitempty"`
+	Methods           []string       `json:"methods,omitempty" jsonschema:"uniqueItems=true,format=httpmethod-array"`
 	Backend           string         `json:"backend" jsonschema:"required"`
-	ClientMaxBodySize int64          `json:"clientMaxBodySize" jsonschema:"omitempty"`
-	Headers           Headers        `json:"headers" jsonschema:"omitempty"`
-	Queries           Queries        `json:"queries,omitempty" jsonschema:"omitempty"`
-	MatchAllHeader    bool           `json:"matchAllHeader" jsonschema:"omitempty"`
-	MatchAllQuery     bool           `json:"matchAllQuery" jsonschema:"omitempty"`
+	ClientMaxBodySize int64          `json:"clientMaxBodySize,omitempty"`
+	Headers           Headers        `json:"headers,omitempty"`
+	Queries           Queries        `json:"queries,omitempty"`
+	MatchAllHeader    bool           `json:"matchAllHeader,omitempty"`
+	MatchAllQuery     bool           `json:"matchAllQuery,omitempty"`
 
 	ipFilter             *ipfilter.IPFilter
 	method               MethodType
@@ -83,8 +93,8 @@ type Queries []*Query
 // than the path entry itself.
 type Header struct {
 	Key    string   `json:"key" jsonschema:"required"`
-	Values []string `json:"values,omitempty" jsonschema:"omitempty,uniqueItems=true"`
-	Regexp string   `json:"regexp,omitempty" jsonschema:"omitempty,format=regexp"`
+	Values []string `json:"values,omitempty" jsonschema:"uniqueItems=true"`
+	Regexp string   `json:"regexp,omitempty" jsonschema:"format=regexp"`
 
 	re *regexp.Regexp
 }
@@ -92,8 +102,8 @@ type Header struct {
 // Query is the third level entry.
 type Query struct {
 	Key    string   `json:"key" jsonschema:"required"`
-	Values []string `json:"values,omitempty" jsonschema:"omitempty,uniqueItems=true"`
-	Regexp string   `json:"regexp,omitempty" jsonschema:"omitempty,format=regexp"`
+	Values []string `json:"values,omitempty" jsonschema:"uniqueItems=true"`
+	Regexp string   `json:"regexp,omitempty" jsonschema:"format=regexp"`
 
 	re *regexp.Regexp
 }
@@ -107,19 +117,42 @@ func (rules Rules) Init() {
 
 // Init is the initialization portal for Rule.
 func (rule *Rule) Init() {
-	var hostRE *regexp.Regexp
+	if len(rule.Host) > 0 {
+		rule.Hosts = append(rule.Hosts, Host{Value: rule.Host})
+	}
+	if len(rule.HostRegexp) > 0 {
+		rule.Hosts = append(rule.Hosts, Host{IsRegexp: true, Value: rule.HostRegexp})
+	}
 
-	if rule.HostRegexp != "" {
-		var err error
-		hostRE, err = regexp.Compile(rule.HostRegexp)
-		if err != nil {
-			logger.Errorf("BUG: compile %s failed: %v", rule.HostRegexp, err)
+	for i := range rule.Hosts {
+		h := &rule.Hosts[i]
+		if !h.IsRegexp {
+			if h.Value != "" {
+				count := strings.Count(h.Value, "*")
+				if count == 0 {
+					continue
+				} else if count > 1 {
+					logger.Errorf("invalid host %s, only one wildcard is allowed", h.Value)
+					continue
+				}
+				if h.Value[0] == '*' {
+					h.suffix = h.Value[1:]
+				} else if h.Value[len(h.Value)-1] == '*' {
+					h.prefix = h.Value[:len(h.Value)-1]
+				} else {
+					logger.Errorf("invalid host %s, only wildcard prefix or suffix is allowed", h.Value)
+				}
+			}
+			continue
+		}
+		if re, err := regexp.Compile(h.Value); err != nil {
+			logger.Errorf("failed to compile %q failed: %v", h.Value, err)
+		} else {
+			h.re = re
 		}
 	}
 
 	rule.ipFilter = ipfilter.New(rule.IPFilterSpec)
-	rule.hostRE = hostRE
-
 	for _, p := range rule.Paths {
 		p.Init(rule.ipFilter)
 	}
@@ -127,17 +160,24 @@ func (rule *Rule) Init() {
 
 // MatchHost matches the host of the request to the rule.
 func (rule *Rule) MatchHost(ctx *RouteContext) bool {
-	if rule.Host == "" && rule.hostRE == nil {
+	if len(rule.Hosts) == 0 {
 		return true
 	}
 
 	host := ctx.GetHost()
-
-	if rule.Host != "" && rule.Host == host {
-		return true
-	}
-	if rule.hostRE != nil && rule.hostRE.MatchString(host) {
-		return true
+	for i := range rule.Hosts {
+		h := &rule.Hosts[i]
+		if h.IsRegexp {
+			if h.re != nil && h.re.MatchString(host) {
+				return true
+			}
+		} else if host == h.Value {
+			return true
+		} else if h.prefix != "" && strings.HasPrefix(host, h.prefix) {
+			return true
+		} else if h.suffix != "" && strings.HasSuffix(host, h.suffix) {
+			return true
+		}
 	}
 
 	return false
@@ -233,6 +273,21 @@ func (p *Path) GetBackend() string {
 // GetClientMaxBodySize is used to get the clientMaxBodySize corresponding to the route.
 func (p *Path) GetClientMaxBodySize() int64 {
 	return p.ClientMaxBodySize
+}
+
+// GetExactPath returns the exact path of the route.
+func (p *Path) GetExactPath() string {
+	return p.Path
+}
+
+// GetPathPrefix returns the path prefix of the route.
+func (p *Path) GetPathPrefix() string {
+	return p.PathPrefix
+}
+
+// GetPathRegexp returns the path regexp of the route.
+func (p *Path) GetPathRegexp() string {
+	return p.PathRegexp
 }
 
 func (hs Headers) init() {

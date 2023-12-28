@@ -21,10 +21,10 @@ package connectcontrol
 import (
 	"regexp"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/mqttprot"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/mqttprot"
 )
 
 const (
@@ -68,18 +68,18 @@ type (
 	Spec struct {
 		filters.BaseSpec `json:",inline"`
 
-		BannedClientRe string   `json:"bannedClientRe" jsonschema:"omitempty"`
-		BannedClients  []string `json:"bannedClients" jsonschema:"omitempty"`
-		BannedTopicRe  string   `json:"bannedTopicRe" jsonschema:"omitempty"`
-		BannedTopics   []string `json:"bannedTopics" jsonschema:"omitempty"`
+		BannedClientRe string   `json:"bannedClientRe,omitempty"`
+		BannedClients  []string `json:"bannedClients,omitempty"`
+		BannedTopicRe  string   `json:"bannedTopicRe,omitempty"`
+		BannedTopics   []string `json:"bannedTopics,omitempty"`
 	}
 
 	// Status is ConnectControl filter status
 	Status struct {
-		BannedClientRe  string `json:"bannedClientRe" jsonschema:"omitempty"`
-		BannedClientNum int    `json:"bannedClientNum" jsonschema:"omitempty"`
-		BannedTopicRe   string `json:"bannedTopicRe" jsonschema:"omitempty"`
-		BannedTopicNum  int    `json:"bannedTopicNum" jsonschema:"omitempty"`
+		BannedClientRe  string `json:"bannedClientRe,omitempty"`
+		BannedClientNum int    `json:"bannedClientNum,omitempty"`
+		BannedTopicRe   string `json:"bannedTopicRe,omitempty"`
+		BannedTopicNum  int    `json:"bannedTopicNum,omitempty"`
 	}
 )
 

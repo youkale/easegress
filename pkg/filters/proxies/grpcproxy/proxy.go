@@ -20,17 +20,18 @@ package grpcproxy
 
 import (
 	"fmt"
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/filters/proxies"
-	"github.com/megaease/easegress/pkg/protocols/grpcprot"
-	"github.com/megaease/easegress/pkg/resilience"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/objectpool"
+	"time"
+
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/filters/proxies"
+	"github.com/megaease/easegress/v2/pkg/protocols/grpcprot"
+	"github.com/megaease/easegress/v2/pkg/resilience"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/objectpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
-	"time"
 )
 
 const (
@@ -69,12 +70,15 @@ var (
 	}
 	defaultDialOpts = []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithCodec(&GrpcCodec{}),
-		grpc.WithBlock()}
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(&GrpcCodec{})),
+		grpc.WithBlock(),
+	}
 )
 
-var _ filters.Filter = (*Proxy)(nil)
-var _ filters.Resiliencer = (*Proxy)(nil)
+var (
+	_ filters.Filter      = (*Proxy)(nil)
+	_ filters.Resiliencer = (*Proxy)(nil)
+)
 
 func init() {
 	filters.Register(kind)
@@ -100,10 +104,10 @@ type (
 		filters.BaseSpec `json:",inline"`
 		Pools            []*ServerPoolSpec `json:"pools" jsonschema:"required"`
 		// Timeout could be specified in unary calls case, and in stream calls case, it should not be specified
-		Timeout             string `json:"timeout" jsonschema:"omitempty,format=duration"`
-		BorrowTimeout       string `json:"borrowTimeout" jsonschema:"omitempty,format=duration"`
-		ConnectTimeout      string `json:"connectTimeout" jsonschema:"omitempty,format=duration"`
-		MaxIdleConnsPerHost int    `json:"maxIdleConnsPerHost" jsonschema:"omitempty"`
+		Timeout             string `json:"timeout,omitempty" jsonschema:"format=duration"`
+		BorrowTimeout       string `json:"borrowTimeout,omitempty" jsonschema:"format=duration"`
+		ConnectTimeout      string `json:"connectTimeout,omitempty" jsonschema:"format=duration"`
+		MaxIdleConnsPerHost int    `json:"maxIdleConnsPerHost,omitempty"`
 	}
 
 	// Server is the backend server.
@@ -253,7 +257,6 @@ func (p *Proxy) Close() {
 	for _, v := range p.candidatePools {
 		v.Close()
 	}
-
 }
 
 // Handle handles GRPCContext.

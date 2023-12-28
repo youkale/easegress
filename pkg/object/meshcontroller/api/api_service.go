@@ -32,11 +32,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/megaease/easegress/pkg/api"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/meshcontroller/spec"
-	"github.com/megaease/easegress/pkg/util/codectool"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/meshcontroller/spec"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 type servicesByOrder []*spec.Service
@@ -71,7 +71,7 @@ func (a *API) listServices(w http.ResponseWriter, r *http.Request) {
 
 	sort.Sort(servicesByOrder(specs))
 
-	var apiSpecs []*v2alpha1.Service
+	apiSpecs := make([]*v2alpha1.Service, 0, len(specs))
 	for _, v := range specs {
 		service := &v2alpha1.Service{}
 		err := a.convertSpecToPB(v, service)
@@ -258,7 +258,7 @@ func (a *API) getServiceDeployment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	statefulsets, err := a.k8sClient.AppsV1().StatefulSets("").List(context.Background(), metav1.ListOptions{})
+	statefulsets, _ := a.k8sClient.AppsV1().StatefulSets("").List(context.Background(), metav1.ListOptions{})
 	for _, statefulset := range statefulsets.Items {
 		if statefulset.Annotations[annotationServiceNameKey] == serviceName {
 			serviceDeployment.App = statefulset

@@ -20,11 +20,12 @@ package builder
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"text/template"
 
-	"github.com/megaease/easegress/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/logger"
 )
 
 func toFloat64(val interface{}) float64 {
@@ -140,5 +141,17 @@ var extraFuncs = template.FuncMap{
 
 	"panic": func(v interface{}) interface{} {
 		panic(v)
+	},
+
+	"header": func(header http.Header, key string) string {
+		return header.Get(key)
+	},
+
+	"username": func(req interface{}) string {
+		type BasicAuth interface {
+			BasicAuth() (username, password string, ok bool)
+		}
+		username, _, _ := req.(BasicAuth).BasicAuth()
+		return username
 	},
 }

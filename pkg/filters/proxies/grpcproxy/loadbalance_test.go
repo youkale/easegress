@@ -21,8 +21,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/megaease/easegress/pkg/protocols/grpcprot"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/protocols/grpcprot"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/metadata"
 )
@@ -39,11 +39,7 @@ func TestForwardLB(t *testing.T) {
 	req := grpcprot.NewRequestWithServerStream(sm)
 	assert.Nil(t, lb.ChooseServer(req))
 
-	target := "%127.0.0.1%8849"
-	req.Header().Set(key, target)
-	assert.Nil(t, lb.ChooseServer(req))
-
-	target = "127.0.0.1:8849"
+	target := "127.0.0.1:8849"
 	req.Header().Set(key, target)
 	svr := lb.ChooseServer(req)
 	assert.Equal(t, target, svr.URL)

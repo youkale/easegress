@@ -19,8 +19,11 @@
 package grpcserver
 
 import (
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/supervisor"
+	"strings"
+
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
 )
 
 const (
@@ -33,6 +36,12 @@ const (
 
 func init() {
 	supervisor.Register(&GRPCServer{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  []string{"grpc"},
+	})
 }
 
 type (

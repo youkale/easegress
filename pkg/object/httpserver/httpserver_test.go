@@ -19,14 +19,13 @@ package httpserver
 
 import (
 	"os"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/megaease/easegress/pkg/context/contexttest"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/option"
-	"github.com/megaease/easegress/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/context/contexttest"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +45,7 @@ port: 38081
 keepAlive: true
 https: false
 `
-	super := supervisor.NewMock(option.New(), nil, sync.Map{}, sync.Map{}, nil,
+	super := supervisor.NewMock(option.New(), nil, nil,
 		nil, false, nil, nil)
 	superSpec, err := super.NewSpec(yamlConfig)
 	assert.NoError(err)

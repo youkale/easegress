@@ -16,7 +16,7 @@ INTEGRATION_TEST_PATH := build/test
 IMAGE_NAME?=megaease/easegress
 
 # Version
-RELEASE?=v2.4.2
+RELEASE?=v2.6.4
 
 # Git Related
 GIT_REPO_INFO=$(shell cd ${MKFILE_DIR} && git config --get remote.origin.url)
@@ -25,7 +25,7 @@ ifndef GIT_COMMIT
 endif
 
 # Build Flags
-GO_LD_FLAGS= "-s -w -X github.com/megaease/easegress/pkg/version.RELEASE=${RELEASE} -X github.com/megaease/easegress/pkg/version.COMMIT=${GIT_COMMIT} -X github.com/megaease/easegress/pkg/version.REPO=${GIT_REPO_INFO}"
+GO_LD_FLAGS= "-s -w -X github.com/megaease/easegress/v2/pkg/version.RELEASE=${RELEASE} -X github.com/megaease/easegress/v2/pkg/version.COMMIT=${GIT_COMMIT} -X github.com/megaease/easegress/v2/pkg/version.REPO=${GIT_REPO_INFO}"
 
 # Cgo is disabled by default
 ENABLE_CGO= CGO_ENABLED=0
@@ -49,9 +49,10 @@ endif
 # Targets
 TARGET_SERVER=${RELEASE_DIR}/easegress-server
 TARGET_CLIENT=${RELEASE_DIR}/egctl
+TARGET_BUILDER=${RELEASE_DIR}/egbuilder
 
 # Rules
-build: build_client build_server
+build: build_client build_server build_builder
 
 wasm: ENABLE_CGO=CGO_ENABLED=1
 wasm: GO_BUILD_TAGS=-tags wasmhost
@@ -62,6 +63,12 @@ build_client:
 	cd ${MKFILE_DIR} && \
 	CGO_ENABLED=0 go build -v -trimpath -ldflags ${GO_LD_FLAGS} \
 	-o ${TARGET_CLIENT} ${MKFILE_DIR}cmd/client
+
+build_builder:
+	@echo "build builder"
+	cd ${MKFILE_DIR} && \
+	CGO_ENABLED=0 go build -v -trimpath -ldflags ${GO_LD_FLAGS} \
+	-o ${TARGET_BUILDER} ${MKFILE_DIR}cmd/builder
 
 build_server:
 	@echo "build server"
@@ -90,7 +97,7 @@ build_docker:
 	docker run -w /egsrc -u ${shell id -u}:${shell id -g} --rm \
 	-v ${GO_PATH}:/gopath -v ${MKFILE_DIR}:/egsrc -v ${MKFILE_DIR}build/cache:/gocache \
 	-e GOPROXY=https://goproxy.io,direct -e GOCACHE=/gocache -e GOPATH=/gopath \
-	megaease/golang:1.20-alpine make build DOCKER=true
+	megaease/golang:1.21.0-alpine make build DOCKER=true
 	docker buildx build --platform linux/amd64 --load -t ${IMAGE_NAME}:${RELEASE} -f ./build/package/Dockerfile .
 	docker tag ${IMAGE_NAME}:${RELEASE} ${IMAGE_NAME}:latest
 	docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:server-sidecar
@@ -101,7 +108,7 @@ test:
 	go mod tidy
 	git diff --exit-code go.mod go.sum
 	go mod verify
-	go test -v -gcflags "all=-l" ${MKFILE_DIR}pkg/... ${TEST_FLAGS}
+	go test -v -gcflags "all=-l" ${MKFILE_DIR}pkg/... ${MKFILE_DIR}cmd/... ${TEST_FLAGS}
 
 integration_test: build
 	{ \

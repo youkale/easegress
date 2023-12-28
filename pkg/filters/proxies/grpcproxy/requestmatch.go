@@ -18,16 +18,16 @@
 package grpcproxy
 
 import (
-	"github.com/megaease/easegress/pkg/filters/proxies"
-	"github.com/megaease/easegress/pkg/protocols"
-	"github.com/megaease/easegress/pkg/protocols/grpcprot"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/filters/proxies"
+	"github.com/megaease/easegress/v2/pkg/protocols"
+	"github.com/megaease/easegress/v2/pkg/protocols/grpcprot"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 // RequestMatcherSpec describe RequestMatcher
 type RequestMatcherSpec struct {
 	proxies.RequestMatcherBaseSpec `json:",inline"`
-	Methods                        []*stringtool.StringMatcher `json:"methods" jsonschema:"omitempty"`
+	Methods                        []*stringtool.StringMatcher `json:"methods,omitempty"`
 }
 
 // Validate validates the RequestMatcherSpec.

@@ -19,13 +19,12 @@ package proxies
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"testing"
 
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,8 +52,6 @@ func TestRequestMatcherBaseSpecValidate(t *testing.T) {
 }
 
 func TestRandomMatcher(t *testing.T) {
-	rand.Seed(0)
-
 	rm := NewRequestMatcher(&RequestMatcherBaseSpec{
 		Policy: "random",
 		Permil: 100,

@@ -23,10 +23,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/serviceregistry"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/serviceregistry"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 // ServerPoolImpl is the interface for server pool.
@@ -45,11 +45,11 @@ type ServerPoolBase struct {
 
 // ServerPoolBaseSpec is the spec for a base server pool.
 type ServerPoolBaseSpec struct {
-	ServerTags      []string         `json:"serverTags" jsonschema:"omitempty,uniqueItems=true"`
-	Servers         []*Server        `json:"servers" jsonschema:"omitempty"`
-	ServiceRegistry string           `json:"serviceRegistry" jsonschema:"omitempty"`
-	ServiceName     string           `json:"serviceName" jsonschema:"omitempty"`
-	LoadBalance     *LoadBalanceSpec `json:"loadBalance" jsonschema:"omitempty"`
+	ServerTags      []string         `json:"serverTags,omitempty" jsonschema:"uniqueItems=true"`
+	Servers         []*Server        `json:"servers,omitempty"`
+	ServiceRegistry string           `json:"serviceRegistry,omitempty"`
+	ServiceName     string           `json:"serviceName,omitempty"`
+	LoadBalance     *LoadBalanceSpec `json:"loadBalance,omitempty"`
 }
 
 // Validate validates ServerPoolSpec.

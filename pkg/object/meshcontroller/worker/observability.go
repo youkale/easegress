@@ -18,11 +18,7 @@
 package worker
 
 import (
-	"github.com/megaease/easegress/pkg/util/jmxtool"
-)
-
-const (
-	easeAgentConfigManager = "com.megaease.easeagent:type=ConfigManager"
+	"github.com/megaease/easegress/v2/pkg/util/jmxtool"
 )
 
 type (

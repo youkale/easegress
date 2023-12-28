@@ -22,12 +22,14 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 
-	"github.com/megaease/easegress/pkg/cluster"
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/cluster"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 const (
@@ -42,6 +44,12 @@ var _ supervisor.TrafficObject = (*MQTTProxy)(nil)
 
 func init() {
 	supervisor.Register(&MQTTProxy{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  []string{"mqtt", "mp"},
+	})
 }
 
 type (

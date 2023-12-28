@@ -26,9 +26,9 @@ import (
 
 	metrics "github.com/rcrowley/go-metrics"
 
-	"github.com/megaease/easegress/pkg/util/codecounter"
-	"github.com/megaease/easegress/pkg/util/easemonitor"
-	"github.com/megaease/easegress/pkg/util/sampler"
+	"github.com/megaease/easegress/v2/pkg/util/codecounter"
+	"github.com/megaease/easegress/v2/pkg/util/easemonitor"
+	"github.com/megaease/easegress/v2/pkg/util/sampler"
 )
 
 type (
@@ -45,10 +45,6 @@ type (
 		errRate1  metrics.EWMA
 		errRate5  metrics.EWMA
 		errRate15 metrics.EWMA
-
-		m1ErrPercent  float64
-		m5ErrPercent  float64
-		m15ErrPercent float64
 
 		total uint64
 		min   uint64

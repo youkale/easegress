@@ -25,12 +25,12 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters/proxies"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/protocols/httpprot/httpstat"
-	"github.com/megaease/easegress/pkg/util/fasttime"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters/proxies"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot/httpstat"
+	"github.com/megaease/easegress/v2/pkg/util/fasttime"
 	"nhooyr.io/websocket"
 )
 
@@ -38,26 +38,32 @@ import (
 type WebSocketServerPool struct {
 	BaseServerPool
 
-	filter   RequestMatcher
-	proxy    *WebSocketProxy
-	spec     *WebSocketServerPoolSpec
-	httpStat *httpstat.HTTPStat
+	filter        RequestMatcher
+	proxy         *WebSocketProxy
+	spec          *WebSocketServerPoolSpec
+	httpStat      *httpstat.HTTPStat
+	healthChecker proxies.HealthChecker
 }
 
 // WebSocketServerPoolSpec is the spec for a server pool.
 type WebSocketServerPoolSpec struct {
 	BaseServerPoolSpec `json:",inline"`
-	ClientMaxMsgSize   int64               `json:"clientMaxMsgSize" jsonschema:"omitempty"`
-	ServerMaxMsgSize   int64               `json:"serverMaxMsgSize" jsonschema:"omitempty"`
-	Filter             *RequestMatcherSpec `json:"filter" jsonschema:"omitempty"`
+	ClientMaxMsgSize   int64               `json:"clientMaxMsgSize,omitempty"`
+	ServerMaxMsgSize   int64               `json:"serverMaxMsgSize,omitempty"`
+	Filter             *RequestMatcherSpec `json:"filter,omitempty"`
+	InsecureSkipVerify bool                `json:"insecureSkipVerify,omitempty"`
+	OriginPatterns     []string            `json:"originPatterns,omitempty"`
+
+	HealthCheck *WSProxyHealthCheckSpec `json:"healthCheck,omitempty"`
 }
 
 // NewWebSocketServerPool creates a new server pool according to spec.
 func NewWebSocketServerPool(proxy *WebSocketProxy, spec *WebSocketServerPoolSpec, name string) *WebSocketServerPool {
 	sp := &WebSocketServerPool{
-		proxy:    proxy,
-		spec:     spec,
-		httpStat: httpstat.New(),
+		proxy:         proxy,
+		spec:          spec,
+		httpStat:      httpstat.New(),
+		healthChecker: NewWebSocketHealthChecker(spec.HealthCheck),
 	}
 	if spec.Filter != nil {
 		sp.filter = NewRequestMatcher(spec.Filter)
@@ -69,7 +75,7 @@ func NewWebSocketServerPool(proxy *WebSocketProxy, spec *WebSocketServerPoolSpec
 // CreateLoadBalancer creates a load balancer according to spec.
 func (sp *WebSocketServerPool) CreateLoadBalancer(spec *LoadBalanceSpec, servers []*Server) LoadBalancer {
 	lb := proxies.NewGeneralLoadBalancer(spec, servers)
-	lb.Init(proxies.NewHTTPSessionSticker, proxies.NewHTTPHealthChecker, nil)
+	lb.Init(proxies.NewHTTPSessionSticker, sp.healthChecker, nil)
 	return lb
 }
 
@@ -95,7 +101,6 @@ func buildServerURL(svr *Server, req *httpprot.Request) (string, error) {
 	switch u1.Scheme {
 	case "ws", "wss":
 		u.Scheme = u1.Scheme
-		break
 	case "http":
 		u.Scheme = "ws"
 	case "https":
@@ -116,6 +121,12 @@ func (sp *WebSocketServerPool) dialServer(svr *Server, req *httpprot.Request) (*
 	opts := &websocket.DialOptions{
 		HTTPHeader:      req.HTTPHeader().Clone(),
 		CompressionMode: websocket.CompressionDisabled,
+	}
+
+	// only set host when server address is not host name OR
+	// server is explicitly told to keep the host of the request.
+	if !svr.AddrIsHostName || svr.KeepHost {
+		opts.Host = req.Host()
 	}
 
 	opts.HTTPHeader.Del("Sec-WebSocket-Origin")
@@ -151,7 +162,7 @@ func (sp *WebSocketServerPool) dialServer(svr *Server, req *httpprot.Request) (*
 	}
 
 	conn, _, err := websocket.Dial(stdctx.Background(), u, opts)
-	if err == nil && sp.spec.ServerMaxMsgSize > 0 {
+	if err == nil && (sp.spec.ServerMaxMsgSize > 0 || sp.spec.ServerMaxMsgSize == -1) {
 		conn.SetReadLimit(sp.spec.ServerMaxMsgSize)
 	}
 	return conn, err
@@ -184,14 +195,22 @@ func (sp *WebSocketServerPool) handle(ctx *context.Context) (result string) {
 		return resultInternalError
 	}
 
-	clntConn, err := websocket.Accept(stdw, req.Std(), nil)
+	opts := &websocket.AcceptOptions{
+		InsecureSkipVerify: sp.spec.InsecureSkipVerify,
+		OriginPatterns:     sp.spec.OriginPatterns,
+	}
+	subProtocol := req.HTTPHeader().Get("Sec-WebSocket-Protocol")
+	if subProtocol != "" {
+		opts.Subprotocols = []string{subProtocol}
+	}
+	clntConn, err := websocket.Accept(stdw, req.Std(), opts)
 	if err != nil {
 		logger.Errorf("%s: failed to establish client connection: %v", sp.Name, err)
 		sp.buildFailureResponse(ctx, http.StatusBadRequest)
 		metric.StatusCode = http.StatusBadRequest
 		return resultClientError
 	}
-	if sp.spec.ClientMaxMsgSize > 0 {
+	if sp.spec.ClientMaxMsgSize > 0 || sp.spec.ClientMaxMsgSize == -1 {
 		clntConn.SetReadLimit(sp.spec.ClientMaxMsgSize)
 	}
 

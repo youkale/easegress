@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/megaease/easegress/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/informers"
@@ -117,7 +117,7 @@ type k8sClient struct {
 }
 
 // OnAdd is called on Resource Add Events.
-func (c *k8sClient) OnAdd(obj interface{}) {
+func (c *k8sClient) OnAdd(obj interface{}, isInInitialList bool) {
 	// if there's an event already in the channel, discard this one,
 	// this is fine because IngressController always reload everything
 	// when receiving an event. Same for OnUpdate & OnDelete
@@ -180,6 +180,9 @@ func checkKubernetesVersion(cfg *rest.Config) (err error) {
 	}
 
 	info, err := cli.ServerVersion()
+	if err != nil {
+		return
+	}
 	if info.Major != "1" {
 		err = fmt.Errorf("unknown kubernetes major version: %v", info.Major)
 		return
@@ -187,14 +190,13 @@ func checkKubernetesVersion(cfg *rest.Config) (err error) {
 
 	minor, err := strconv.Atoi(info.Minor)
 	if err != nil {
-		err = fmt.Errorf("unknown kubernetes minor version: %v", info.Minor)
+		err = fmt.Errorf("unknown kubernetes minor version: %v, %s", info.Minor, err.Error())
 		return
 	}
 
 	if minor < 19 {
 		// Ingress version v1 has been added after kubernetes 1.19
 		panic(fmt.Errorf("kubernetes version [%v] is too low, IngressController requires kubernetes v1.19+", info.GitVersion))
-		return
 	}
 
 	return

@@ -21,13 +21,15 @@ package zookeeperserviceregistry
 import (
 	"fmt"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/serviceregistry"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/serviceregistry"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 
 	zookeeper "github.com/go-zookeeper/zk"
 )
@@ -38,12 +40,16 @@ const (
 
 	// Kind is the kind of ZookeeperServiceRegistry.
 	Kind = "ZookeeperServiceRegistry"
-
-	requestTimeout = 5 * time.Second
 )
 
 func init() {
 	supervisor.Register(&ZookeeperServiceRegistry{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  []string{"zookeeper", "zk", "zkserviceregistries"},
+	})
 }
 
 type (

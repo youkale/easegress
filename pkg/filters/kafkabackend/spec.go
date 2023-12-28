@@ -17,7 +17,7 @@
 
 package kafka
 
-import "github.com/megaease/easegress/pkg/filters"
+import "github.com/megaease/easegress/v2/pkg/filters"
 
 type (
 	// Spec is spec of Kafka
@@ -31,11 +31,11 @@ type (
 	// Topic defined ways to get Kafka topic
 	Topic struct {
 		Default string   `json:"default" jsonschema:"required"`
-		Dynamic *Dynamic `json:"dynamic" jsonschema:"omitempty"`
+		Dynamic *Dynamic `json:"dynamic,omitempty"`
 	}
 
 	// Dynamic defines dynamic ways to get Kafka topic from http request
 	Dynamic struct {
-		Header string `json:"header" jsonschema:"omitempty"`
+		Header string `json:"header,omitempty"`
 	}
 )

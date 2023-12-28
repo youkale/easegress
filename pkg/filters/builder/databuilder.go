@@ -20,9 +20,9 @@ package builder
 import (
 	"fmt"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/logger"
 )
 
 const (
@@ -57,7 +57,7 @@ type (
 	DataBuilderSpec struct {
 		filters.BaseSpec `json:",inline"`
 		Spec             `json:",inline"`
-		DataKey          string `json:"dataKey" jsonschema:"omitempty"`
+		DataKey          string `json:"dataKey,omitempty"`
 	}
 )
 
@@ -106,7 +106,6 @@ func (db *DataBuilder) reload() {
 // Handle builds request.
 func (db *DataBuilder) Handle(ctx *context.Context) (result string) {
 	data, err := prepareBuilderData(ctx)
-
 	if err != nil {
 		logger.Warnf("prepareBuilderData failed: %v", err)
 		return resultBuildErr

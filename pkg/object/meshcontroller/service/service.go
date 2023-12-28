@@ -25,14 +25,14 @@ import (
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
 
-	"github.com/megaease/easegress/pkg/api"
-	"github.com/megaease/easegress/pkg/cluster/customdata"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/meshcontroller/layout"
-	"github.com/megaease/easegress/pkg/object/meshcontroller/spec"
-	"github.com/megaease/easegress/pkg/object/meshcontroller/storage"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/cluster/customdata"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/meshcontroller/layout"
+	"github.com/megaease/easegress/v2/pkg/object/meshcontroller/spec"
+	"github.com/megaease/easegress/v2/pkg/object/meshcontroller/storage"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 type (
@@ -209,12 +209,12 @@ func (s *Service) ListServiceCerts() []*spec.Certificate {
 
 // ListAllIngressControllerInstanceCerts  gets the ingress controller cert.
 func (s *Service) ListAllIngressControllerInstanceCerts() []*spec.Certificate {
-	var certs []*spec.Certificate
 	values, err := s.store.GetPrefix(layout.AllIngressControllerInstanceCertPrefix())
 	if err != nil {
 		api.ClusterPanic(err)
 	}
 
+	certs := make([]*spec.Certificate, 0, len(values))
 	for _, v := range values {
 		cert := &spec.Certificate{}
 		if err = codectool.Unmarshal([]byte(v), cert); err != nil {
@@ -225,7 +225,7 @@ func (s *Service) ListAllIngressControllerInstanceCerts() []*spec.Certificate {
 		certs = append(certs, cert)
 
 	}
-	return certs
+	return certs[:len(certs):len(certs)]
 }
 
 // PutIngressControllerInstanceCert puts the root cert.

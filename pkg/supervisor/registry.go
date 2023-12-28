@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/megaease/easegress/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/context"
 )
 
 type (
@@ -146,6 +146,11 @@ func ObjectKinds() []string {
 	sort.Strings(kinds)
 
 	return kinds
+}
+
+// GetObject returns object by kind.
+func GetObject(kind string) Object {
+	return objectRegistry[kind]
 }
 
 // TrafficObjectKinds is a map that contains all kinds of TrafficObject.

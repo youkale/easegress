@@ -23,12 +23,39 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/megaease/easegress/pkg/filters/proxies"
-	"github.com/megaease/easegress/pkg/util/objectpool"
+	"github.com/megaease/easegress/v2/pkg/protocols/grpcprot"
+
+	"github.com/megaease/easegress/v2/pkg/filters/proxies"
+	"github.com/megaease/easegress/v2/pkg/util/objectpool"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func TestSPSValidate(t *testing.T) {
+	at := assert.New(t)
+	sps := &ServerPoolSpec{}
+	at.Error(sps.Validate())
+
+	sps.ServiceName = "demo"
+	at.NoError(sps.Validate())
+
+	sps.Servers = []*Server{
+		{Weight: 10},
+		{Weight: 0},
+	}
+	at.Error(sps.Validate())
+	sps.Servers[1].Weight = 1
+	at.NoError(sps.Validate())
+}
+
+func TestCreateLB(t *testing.T) {
+	s := &ServerPool{}
+	lb := s.CreateLoadBalancer(&LoadBalanceSpec{Policy: LoadBalancePolicyForward}, nil)
+	at := assert.New(t)
+	at.IsType(&forwardLoadBalancer{}, lb)
+
+}
 
 func multiGetAndPut(pool *MultiPool, key string, ctx context.Context) {
 	iPoolObject, _ := pool.Get(key, ctx, func() (objectpool.PoolObject, error) {
@@ -166,4 +193,51 @@ func TestServerPoolSpecValidate(t *testing.T) {
 
 	sps.Servers[0].Weight = 1
 	assert.Error(t, sps.Validate())
+}
+
+func TestGetTarget(t *testing.T) {
+	at := assert.New(t)
+
+	s := `
+kind: GRPCProxy
+pools:
+ - loadBalance:
+     policy: roundRobin
+   servers:
+    - url: http://192.168.1.1:80
+    - url: http://192.168.1.2:80
+   serviceName: easegress
+maxIdleConnsPerHost: 2
+connectTimeout: 100ms
+borrowTimeout: 100ms
+name: grpcforwardproxy
+`
+	proxy := newTestProxy(s, at)
+
+	server := proxy.mainPool.LoadBalancer().ChooseServer(nil)
+
+	at.NotEqual("", proxy.mainPool.getTarget(server.URL))
+
+	proxy.Close()
+
+	s = `
+kind: GRPCProxy
+pools:
+ - loadBalance:
+     policy: forward
+     forwardKey: targetAddress
+   serviceName: easegress
+maxIdleConnsPerHost: 2
+connectTimeout: 100ms
+borrowTimeout: 100ms
+name: grpcforwardproxy
+`
+	proxy = newTestProxy(s, at)
+	request := grpcprot.NewRequestWithContext(context.Background())
+	request.Header().Add("targetAddress", "192.168.1.1:8080")
+
+	at.Equal("192.168.1.1:8080", proxy.mainPool.getTarget(proxy.mainPool.LoadBalancer().ChooseServer(request).URL))
+
+	request.Header().Set("targetAddress", "192.168.1.1")
+	at.Equal("", proxy.mainPool.getTarget(proxy.mainPool.LoadBalancer().ChooseServer(request).URL))
 }

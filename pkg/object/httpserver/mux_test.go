@@ -22,21 +22,24 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"testing/iotest"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/httpserver/routers"
+	"github.com/megaease/easegress/v2/pkg/cluster"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/httpserver/routers"
+	"github.com/megaease/easegress/v2/pkg/option"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/context/contexttest"
-	_ "github.com/megaease/easegress/pkg/object/httpserver/routers/ordered"
-	_ "github.com/megaease/easegress/pkg/object/httpserver/routers/radixtree"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/protocols/httpprot/httpstat"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/tracing"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/context/contexttest"
+	_ "github.com/megaease/easegress/v2/pkg/object/httpserver/routers/ordered"
+	_ "github.com/megaease/easegress/v2/pkg/object/httpserver/routers/radixtree"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot/httpstat"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/tracing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -120,6 +123,16 @@ func TestAppendXForwardFor(t *testing.T) {
 }
 
 func TestServerACME(t *testing.T) {
+	// NOTE: For loading system controller AutoCertManager.
+	etcdDirName, err := os.MkdirTemp("", "autocertmanager-test")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	defer os.RemoveAll(etcdDirName)
+
+	cls := cluster.CreateClusterForTest(etcdDirName)
+	supervisor.MustNew(&option.Options{}, cls)
+
 	assert := assert.New(t)
 
 	mm := &contexttest.MockedMuxMapper{}
@@ -630,7 +643,6 @@ rules:
 	stdr.Header.Set("X-Real-Ip", "192.168.1.5")
 	req, _ = httpprot.NewRequest(stdr)
 	assert.Equal(403, mi.search(routers.NewContext(req)).code)
-
 }
 
 func TestAccessLog(t *testing.T) {
@@ -650,5 +662,7 @@ func TestPrintHeader(t *testing.T) {
 	h.Set("b", "2")
 	s := printHeader(h)
 
-	assert.Equal(t, "A: [1], B: [2]", s)
+	if s != "A: [1], B: [2]" && s != "B: [2], A: [1]" {
+		t.Fail()
+	}
 }

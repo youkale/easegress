@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 func aboutText() string {
@@ -107,6 +107,7 @@ func (s *Server) registerAPIs() {
 	group.Entries = append(group.Entries, s.customDataAPIEntries()...)
 	group.Entries = append(group.Entries, s.profileAPIEntries()...)
 	group.Entries = append(group.Entries, s.prometheusMetricsAPIEntries()...)
+	group.Entries = append(group.Entries, s.logsAPIEntries()...)
 
 	for _, fn := range appendAddonAPIs {
 		fn(s, group)

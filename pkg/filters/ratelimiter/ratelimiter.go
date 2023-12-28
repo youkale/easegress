@@ -24,12 +24,12 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	librl "github.com/megaease/easegress/pkg/util/ratelimiter"
-	"github.com/megaease/easegress/pkg/util/urlrule"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	librl "github.com/megaease/easegress/v2/pkg/util/ratelimiter"
+	"github.com/megaease/easegress/v2/pkg/util/urlrule"
 )
 
 const (
@@ -58,9 +58,9 @@ type (
 	// Policy defines the policy of a rate limiter
 	Policy struct {
 		Name               string `json:"name" jsonschema:"required"`
-		TimeoutDuration    string `json:"timeoutDuration" jsonschema:"omitempty,format=duration"`
-		LimitRefreshPeriod string `json:"limitRefreshPeriod" jsonschema:"omitempty,format=duration"`
-		LimitForPeriod     int    `json:"limitForPeriod" jsonschema:"omitempty,minimum=1"`
+		TimeoutDuration    string `json:"timeoutDuration,omitempty" jsonschema:"format=duration"`
+		LimitRefreshPeriod string `json:"limitRefreshPeriod,omitempty" jsonschema:"format=duration"`
+		LimitForPeriod     int    `json:"limitForPeriod,omitempty" jsonschema:"minimum=1"`
 	}
 
 	// URLRule defines the rate limiter rule for a URL pattern
@@ -79,7 +79,7 @@ type (
 	// Rule is the detailed config of RateLimiter.
 	Rule struct {
 		Policies         []*Policy  `json:"policies" jsonschema:"required"`
-		DefaultPolicyRef string     `json:"defaultPolicyRef" jsonschema:"omitempty"`
+		DefaultPolicyRef string     `json:"defaultPolicyRef,omitempty"`
 		URLs             []*URLRule `json:"urls" jsonschema:"required"`
 	}
 

@@ -31,8 +31,8 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/megaease/easegress/pkg/common"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/common"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 // ClusterOptions defines the cluster members.
@@ -72,10 +72,12 @@ type Options struct {
 	TLS                      bool              `yaml:"tls"`
 	CertFile                 string            `yaml:"cert-file"`
 	KeyFile                  string            `yaml:"key-file"`
+	ClientCAFile             string            `yaml:"client-ca-file"`
 	Debug                    bool              `yaml:"debug"`
 	DisableAccessLog         bool              `yaml:"disable-access-log"`
 	InitialObjectConfigFiles []string          `yaml:"initial-object-config-files"`
 	ObjectsDumpInterval      string            `yaml:"objects-dump-interval"`
+	BasicAuth                map[string]string `yaml:"basic-auth"`
 
 	// cluster options
 	UseStandaloneEtcd     bool           `yaml:"use-standalone-etcd"`
@@ -147,7 +149,7 @@ func New() *Options {
 	opt.flags.BoolVar(&opt.Debug, "debug", false, "Flag to set lowest log level from INFO downgrade DEBUG.")
 	opt.flags.StringSliceVar(&opt.InitialObjectConfigFiles, "initial-object-config-files", nil, "List of configuration files for initial objects, these objects will be created at startup if not already exist.")
 	opt.flags.StringVar(&opt.ObjectsDumpInterval, "objects-dump-interval", "", "The time interval to dump running objects config, for example: 30m")
-
+	opt.flags.BoolVar(&opt.DisableAccessLog, "disable-access", false, "Flag to set whether to disable access logs")
 	opt.flags.StringVar(&opt.HomeDir, "home-dir", "./", "Path to the home directory.")
 	opt.flags.StringVar(&opt.DataDir, "data-dir", "data", "Path to the data directory.")
 	opt.flags.StringVar(&opt.WALDir, "wal-dir", "", "Path to the WAL directory.")
@@ -192,7 +194,11 @@ func (opt *Options) renameLegacyClusterRoles() {
 // Parse parses all arguments, when the user wants to display version information or view help,
 // we do not execute subsequent logic and return directly.
 func (opt *Options) Parse() error {
-	err := opt.flags.Parse(os.Args[1:])
+	err := SetFlagsFromEnv("EASEGRESS", opt.flags)
+	if err != nil {
+		return err
+	}
+	err = opt.flags.Parse(os.Args[1:])
 	if err != nil {
 		return err
 	}
@@ -333,10 +339,6 @@ func (opt *Options) validate() error {
 	_, _, err = net.SplitHostPort(opt.APIAddr)
 	if err != nil {
 		return fmt.Errorf("invalid api-addr: %v", err)
-	}
-
-	if err != nil {
-		return fmt.Errorf("invalid api-url: %v", err)
 	}
 
 	// dirs

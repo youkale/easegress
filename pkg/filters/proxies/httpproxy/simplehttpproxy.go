@@ -27,14 +27,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/protocols/httpprot/httpstat"
-	"github.com/megaease/easegress/pkg/resilience"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/fasttime"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot/httpstat"
+	"github.com/megaease/easegress/v2/pkg/resilience"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/fasttime"
 )
 
 var simpleHTTPProxyKind = &filters.Kind{
@@ -82,12 +82,12 @@ type (
 	SimpleHTTPProxySpec struct {
 		filters.BaseSpec `json:",inline"`
 
-		Compression         *CompressionSpec `json:"compression,omitempty" jsonschema:"omitempty"`
-		MaxIdleConns        int              `json:"maxIdleConns" jsonschema:"omitempty"`
-		MaxIdleConnsPerHost int              `json:"maxIdleConnsPerHost" jsonschema:"omitempty"`
-		ServerMaxBodySize   int64            `json:"serverMaxBodySize" jsonschema:"omitempty"`
-		Timeout             string           `json:"timeout" jsonschema:"omitempty,format=duration"`
-		RetryPolicy         string           `json:"retryPolicy" jsonschema:"omitempty"`
+		Compression         *CompressionSpec `json:"compression,omitempty"`
+		MaxIdleConns        int              `json:"maxIdleConns,omitempty"`
+		MaxIdleConnsPerHost int              `json:"maxIdleConnsPerHost,omitempty"`
+		ServerMaxBodySize   int64            `json:"serverMaxBodySize,omitempty"`
+		Timeout             string           `json:"timeout,omitempty" jsonschema:"format=duration"`
+		RetryPolicy         string           `json:"retryPolicy,omitempty"`
 	}
 )
 
@@ -146,7 +146,11 @@ func (shp *SimpleHTTPProxy) reload() {
 		shp.compression = newCompression(shp.spec.Compression)
 	}
 	// create http.Client
-	shp.client = HTTPClient(nil, shp.spec.MaxIdleConns, shp.spec.MaxIdleConnsPerHost, shp.timeout)
+	clientSpec := &HTTPClientSpec{
+		MaxIdleConns:        shp.spec.MaxIdleConns,
+		MaxIdleConnsPerHost: shp.spec.MaxIdleConnsPerHost,
+	}
+	shp.client = HTTPClient(nil, clientSpec, shp.timeout)
 }
 
 // Status returns SimpleHTTPProxy status.
@@ -278,7 +282,7 @@ func (shp *SimpleHTTPProxy) Handle(ctx *context.Context) (result string) {
 
 	maxBodySize := shp.spec.ServerMaxBodySize
 	if err = httpResp.FetchPayload(maxBodySize); err != nil {
-		logger.Errorf("%s: failed to fetch response payload: %v", shp.Name(), err)
+		logger.Errorf("%s: failed to fetch response payload: %v, please consider to set serverMaxBodySize of SimpleHTTPProxy to -1.", shp.Name(), err)
 		return resultServerError
 	}
 

@@ -35,14 +35,14 @@ import (
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/eclipse/paho.mqtt.golang/packets"
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	_ "github.com/megaease/easegress/pkg/filters/mqttclientauth"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/pipeline"
-	"github.com/megaease/easegress/pkg/option"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	_ "github.com/megaease/easegress/v2/pkg/filters/mqttclientauth"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/pipeline"
+	"github.com/megaease/easegress/v2/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -751,10 +751,9 @@ type testServer struct {
 
 func newServer(addr string) *testServer {
 	mux := http.NewServeMux()
-	srv := http.Server{Addr: addr, Handler: mux}
 	ts := &testServer{
 		mux:  mux,
-		srv:  srv,
+		srv:  http.Server{Addr: addr, Handler: mux},
 		addr: addr,
 	}
 	return ts
@@ -1389,7 +1388,7 @@ func TestMQTTProxy(t *testing.T) {
 name: mqtt-proxy
 kind: MQTTProxy
 `
-	super := supervisor.NewMock(option.New(), nil, sync.Map{}, sync.Map{}, nil, nil, false, nil, nil)
+	super := supervisor.NewMock(option.New(), nil, nil, nil, false, nil, nil)
 	super.Options()
 	superSpec, err := super.NewSpec(yamlStr)
 	assert.Nil(err)

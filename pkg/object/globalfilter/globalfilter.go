@@ -20,12 +20,14 @@ package globalfilter
 
 import (
 	"fmt"
+	"strings"
 	"sync/atomic"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/object/pipeline"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/object/pipeline"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 const (
@@ -35,6 +37,18 @@ const (
 	// Kind is the kind of GlobalFilter.
 	Kind = "GlobalFilter"
 )
+
+var aliases = []string{"globalfilters"}
+
+func init() {
+	supervisor.Register(&GlobalFilter{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  aliases,
+	})
+}
 
 type (
 	// GlobalFilter is a business controller.
@@ -50,21 +64,17 @@ type (
 
 	// Spec describes the GlobalFilter.
 	Spec struct {
-		BeforePipeline *pipeline.Spec `json:"beforePipeline" jsonschema:"omitempty"`
-		AfterPipeline  *pipeline.Spec `json:"afterPipeline" jsonschema:"omitempty"`
+		BeforePipeline *pipeline.Spec `json:"beforePipeline,omitempty"`
+		AfterPipeline  *pipeline.Spec `json:"afterPipeline,omitempty"`
 	}
 
 	// pipelineSpec defines pipeline spec to create an pipeline entity.
 	pipelineSpec struct {
-		Kind           string `json:"kind" jsonschema:"omitempty"`
-		Name           string `json:"name" jsonschema:"omitempty"`
+		Kind           string `json:"kind,omitempty"`
+		Name           string `json:"name,omitempty"`
 		*pipeline.Spec `json:",inline"`
 	}
 )
-
-func init() {
-	supervisor.Register(&GlobalFilter{})
-}
 
 // Validate validates Spec.
 func (s *Spec) Validate() (err error) {
@@ -117,6 +127,7 @@ func (gf *GlobalFilter) Status() *supervisor.Status {
 // Init initializes GlobalFilter.
 func (gf *GlobalFilter) Init(superSpec *supervisor.Spec) {
 	gf.superSpec, gf.spec = superSpec, superSpec.ObjectSpec().(*Spec)
+	gf.super = superSpec.Super()
 	gf.reload(nil)
 }
 

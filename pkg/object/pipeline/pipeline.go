@@ -23,13 +23,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/resilience"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/util/easemonitor"
-	"github.com/megaease/easegress/pkg/util/fasttime"
-	"github.com/megaease/easegress/pkg/util/stringtool"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/resilience"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/util/easemonitor"
+	"github.com/megaease/easegress/v2/pkg/util/fasttime"
+	"github.com/megaease/easegress/v2/pkg/util/stringtool"
 )
 
 const (
@@ -45,6 +46,12 @@ const (
 
 func init() {
 	supervisor.Register(&Pipeline{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  []string{"pipelines", "pl"},
+	})
 }
 
 func isBuiltInFilter(name string) bool {
@@ -64,18 +71,18 @@ type (
 
 	// Spec describes the Pipeline.
 	Spec struct {
-		Flow       []FlowNode               `json:"flow" jsonschema:"omitempty"`
+		Flow       []FlowNode               `json:"flow,omitempty"`
 		Filters    []map[string]interface{} `json:"filters" jsonschema:"required"`
-		Resilience []map[string]interface{} `json:"resilience" jsonschema:"omitempty"`
-		Data       map[string]interface{}   `json:"data" jsonschema:"omitempty"`
+		Resilience []map[string]interface{} `json:"resilience,omitempty"`
+		Data       map[string]interface{}   `json:"data,omitempty"`
 	}
 
 	// FlowNode describes one node of the pipeline flow.
 	FlowNode struct {
 		FilterName  string            `json:"filter" jsonschema:"required,format=urlname"`
-		FilterAlias string            `json:"alias" jsonschema:"omitempty"`
-		Namespace   string            `json:"namespace" jsonschema:"omitempty"`
-		JumpIf      map[string]string `json:"jumpIf" jsonschema:"omitempty"`
+		FilterAlias string            `json:"alias,omitempty"`
+		Namespace   string            `json:"namespace,omitempty"`
+		JumpIf      map[string]string `json:"jumpIf,omitempty"`
 		filter      filters.Filter
 	}
 
@@ -282,7 +289,7 @@ func (p *Pipeline) reload(previousGeneration *Pipeline) {
 
 		// add the filter to pipeline, and if the pipeline does not define a
 		// flow, append it to the flow we just created.
-		p.filters[filter.Name()] = filter
+		p.filters[spec.Name()] = filter
 		if len(p.spec.Flow) == 0 {
 			flow = append(flow, FlowNode{FilterName: spec.Name()})
 		}
@@ -329,7 +336,7 @@ func (p *Pipeline) HandleWithBeforeAfter(ctx *context.Context, before, after *Pi
 	}
 
 	if !sawEnd && after != nil {
-		result, stats, sawEnd = p.doHandle(ctx, after.flow, stats)
+		result, stats, _ = p.doHandle(ctx, after.flow, stats)
 	}
 
 	ctx.LazyAddTag(func() string {

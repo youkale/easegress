@@ -19,16 +19,15 @@ package httpproxy
 
 import (
 	"net/http"
-	"sync"
 	"testing"
 
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/option"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/resilience"
-	"github.com/megaease/easegress/pkg/supervisor"
-	"github.com/megaease/easegress/pkg/tracing"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/resilience"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/tracing"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,8 +91,8 @@ servers:
 	assert.NoError(err)
 	assert.NoError(spec.Validate())
 
-	p := &Proxy{}
-	p.super = supervisor.NewMock(option.New(), nil, sync.Map{}, sync.Map{}, nil,
+	p := kind.CreateInstance(kind.DefaultSpec()).(*Proxy)
+	p.super = supervisor.NewMock(option.New(), nil, nil,
 		nil, false, nil, nil)
 	sp := NewServerPool(p, spec, "test")
 	policies := map[string]resilience.Policy{}
@@ -134,8 +133,8 @@ servers:
 	assert.NoError(err)
 	assert.NoError(spec.Validate())
 
-	p := &Proxy{}
-	p.super = supervisor.NewMock(option.New(), nil, sync.Map{}, sync.Map{}, nil,
+	p := kind.CreateInstance(kind.DefaultSpec()).(*Proxy)
+	p.super = supervisor.NewMock(option.New(), nil, nil,
 		nil, false, nil, nil)
 	sp := NewServerPool(p, spec, "test")
 	spCtx := &serverPoolContext{
@@ -177,8 +176,8 @@ func TestCopyCORSHeaders(t *testing.T) {
 	src.Add("X-Src", "src")
 	dst.Add("X-Dst", "dst")
 
-	p := &Proxy{}
-	p.super = supervisor.NewMock(option.New(), nil, sync.Map{}, sync.Map{}, nil,
+	p := kind.CreateInstance(kind.DefaultSpec()).(*Proxy)
+	p.super = supervisor.NewMock(option.New(), nil, nil,
 		nil, false, nil, nil)
 	sp := NewServerPool(p, &ServerPoolSpec{}, "test")
 	dst = sp.mergeResponseHeader(dst, src)

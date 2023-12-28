@@ -18,9 +18,8 @@
 package cluster
 
 import (
+	"crypto/rand"
 	"fmt"
-	"io/ioutil"
-	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -34,9 +33,9 @@ import (
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.etcd.io/etcd/client/v3/concurrency"
 
-	"github.com/megaease/easegress/pkg/env"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/option"
+	"github.com/megaease/easegress/v2/pkg/env"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/option"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,7 +48,6 @@ func getRandomString(n int) string {
 }
 
 func TestMain(m *testing.M) {
-	rand.Seed(time.Now().UnixNano())
 	logger.InitNop()
 	// logger.InitMock()
 	tempDir = path.Join(tempDir, getRandomString(6))
@@ -568,7 +566,7 @@ func TestUtilEqual(t *testing.T) {
 }
 
 func TestIsLeader(t *testing.T) {
-	etcdDirName, err := ioutil.TempDir("", "cluster-test")
+	etcdDirName, err := os.MkdirTemp("", "cluster-test")
 	check(err)
 	defer os.RemoveAll(etcdDirName)
 
@@ -592,7 +590,7 @@ func TestInvalidConfig(t *testing.T) {
 
 func TestRunDefrag(t *testing.T) {
 	assert := assert.New(t)
-	etcdDirName, err := ioutil.TempDir("", "cluster-test")
+	etcdDirName, err := os.MkdirTemp("", "cluster-test")
 	check(err)
 	defer os.RemoveAll(etcdDirName)
 

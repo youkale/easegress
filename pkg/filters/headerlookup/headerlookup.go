@@ -29,12 +29,12 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 
-	"github.com/megaease/easegress/pkg/cluster"
-	"github.com/megaease/easegress/pkg/context"
-	"github.com/megaease/easegress/pkg/filters"
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/util/codectool"
+	"github.com/megaease/easegress/v2/pkg/cluster"
+	"github.com/megaease/easegress/v2/pkg/context"
+	"github.com/megaease/easegress/v2/pkg/filters"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/util/codectool"
 )
 
 const (
@@ -78,8 +78,8 @@ type (
 
 	// HeaderSetterSpec defines etcd source key and request destination header.
 	HeaderSetterSpec struct {
-		EtcdKey   string `json:"etcdKey,omitempty" jsonschema:"omitempty"`
-		HeaderKey string `json:"headerKey,omitempty" jsonschema:"omitempty"`
+		EtcdKey   string `json:"etcdKey,omitempty"`
+		HeaderKey string `json:"headerKey,omitempty"`
 	}
 
 	// Spec defines header key and etcd prefix that form etcd key like /custom-data/{etcdPrefix}/{headerKey's value}.
@@ -95,7 +95,7 @@ type (
 
 		HeaderKey     string              `json:"headerKey" jsonschema:"required"`
 		EtcdPrefix    string              `json:"etcdPrefix" jsonschema:"required"`
-		PathRegExp    string              `json:"pathRegExp" jsonschema:"omitempty"`
+		PathRegExp    string              `json:"pathRegExp,omitempty"`
 		HeaderSetters []*HeaderSetterSpec `json:"headerSetters" jsonschema:"required"`
 	}
 )

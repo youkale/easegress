@@ -20,13 +20,15 @@ package ingresscontroller
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/httpserver"
-	"github.com/megaease/easegress/pkg/object/trafficcontroller"
-	"github.com/megaease/easegress/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/httpserver"
+	"github.com/megaease/easegress/v2/pkg/object/trafficcontroller"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
 )
 
 const (
@@ -39,6 +41,16 @@ const (
 	defaultIngressControllerName = "megaease.com/ingress-controller"
 	k8sIngressClassAnnotation    = "kubernetes.io/ingress.class"
 )
+
+func init() {
+	supervisor.Register(&IngressController{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     strings.ToLower(Kind),
+		Aliases:  []string{"ingresscontrollers", "ingress"},
+	})
+}
 
 type (
 	// IngressController implements a K8s ingress controller
@@ -58,16 +70,12 @@ type (
 	// Spec is the ingress controller spec
 	Spec struct {
 		HTTPServer   *httpserver.Spec `json:"httpServer" jsonschema:"required"`
-		KubeConfig   string           `json:"kubeConfig" jsonschema:"omitempty"`
-		MasterURL    string           `json:"masterURL" jsonschema:"omitempty"`
-		Namespaces   []string         `json:"namespaces" jsonschema:"omitempty"`
-		IngressClass string           `json:"ingressClass" jsonschema:"omitempty"`
+		KubeConfig   string           `json:"kubeConfig,omitempty"`
+		MasterURL    string           `json:"masterURL,omitempty"`
+		Namespaces   []string         `json:"namespaces,omitempty"`
+		IngressClass string           `json:"ingressClass,omitempty"`
 	}
 )
-
-func init() {
-	supervisor.Register(&IngressController{})
-}
 
 // Category returns the category of IngressController.
 func (ic *IngressController) Category() supervisor.ObjectCategory {

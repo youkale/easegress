@@ -22,9 +22,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/protocols/httpprot"
-	"github.com/megaease/easegress/pkg/util/ipfilter"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/protocols/httpprot"
+	"github.com/megaease/easegress/v2/pkg/util/ipfilter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,12 +70,12 @@ func TestRuleInit(t *testing.T) {
 	rules.Init()
 
 	rule := rules[0]
-	assert.NotNil(rule.hostRE)
+	assert.NotNil(rule.Hosts[1].re)
 	assert.NotNil(rule.ipFilter)
 	assert.Equal(len(rule.Paths), 1)
 
 	rule = rules[1]
-	assert.NotNil(rule.hostRE)
+	assert.NotNil(rule.Hosts[1].re)
 	assert.NotNil(rule.ipFilter)
 
 	assert.Equal(len(rule.Paths), 1)
@@ -96,7 +96,7 @@ func TestRuleInit(t *testing.T) {
 		},
 	}
 	rule.Init()
-	assert.Nil(rule.hostRE)
+	assert.Nil(rule.Hosts[1].re)
 }
 
 func TestRuleMatch(t *testing.T) {
@@ -126,6 +126,29 @@ func TestRuleMatch(t *testing.T) {
 	rule.Init()
 	assert.NotNil(rule)
 	assert.False(rule.MatchHost(ctx))
+
+	testCases := []struct {
+		request string
+		value   string
+		result  bool
+	}{
+		{request: "http://www.megaease.com:8080", value: "www.megaease.com", result: true},
+		{request: "http://www.megaease.com:8080", value: "*.megaease.com", result: true},
+		{request: "http://www.sub.megaease.com:8080", value: "*.megaease.com", result: true},
+		{request: "http://www.example.megaease.com:8080", value: "*.megaease.com", result: true},
+		{request: "http://www.megaease.com:8080", value: "www.megaease.*", result: true},
+		{request: "http://www.megaease.cn:8080", value: "www.megaease.*", result: true},
+		{request: "http://www.google.com:8080", value: "*.megaease.com", result: false},
+	}
+	for _, tc := range testCases {
+		stdr, _ := http.NewRequest(http.MethodGet, tc.request, nil)
+		req, _ := httpprot.NewRequest(stdr)
+		ctx := NewContext(req)
+
+		rule = &Rule{Hosts: []Host{{Value: tc.value}}}
+		rule.Init()
+		assert.Equal(tc.result, rule.MatchHost(ctx))
+	}
 }
 
 func TestRuleAllowIP(t *testing.T) {

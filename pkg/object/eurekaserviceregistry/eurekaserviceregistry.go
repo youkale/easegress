@@ -25,9 +25,10 @@ import (
 
 	eurekaapi "github.com/ArthurHlt/go-eureka-client/eureka"
 
-	"github.com/megaease/easegress/pkg/logger"
-	"github.com/megaease/easegress/pkg/object/serviceregistry"
-	"github.com/megaease/easegress/pkg/supervisor"
+	"github.com/megaease/easegress/v2/pkg/api"
+	"github.com/megaease/easegress/v2/pkg/logger"
+	"github.com/megaease/easegress/v2/pkg/object/serviceregistry"
+	"github.com/megaease/easegress/v2/pkg/supervisor"
 )
 
 const (
@@ -39,10 +40,20 @@ const (
 
 	// MetaKeyRegistryName is the key of service metadata.
 	MetaKeyRegistryName = "RegistryName"
+
+	name = "eurekaserviceregistry"
 )
+
+var aliases = []string{"eureka"}
 
 func init() {
 	supervisor.Register(&EurekaServiceRegistry{})
+	api.RegisterObject(&api.APIResource{
+		Category: Category,
+		Kind:     Kind,
+		Name:     name,
+		Aliases:  aliases,
+	})
 }
 
 type (
